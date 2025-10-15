@@ -12,6 +12,7 @@ Backend - Supabase jako kompleksowe rozwiązanie backendowe:
 - Posiada wbudowaną autentykację użytkowników
 
 AI - Komunikacja przez usługę Google API
+- Wymaga konfiguracji zmiennej środowiskowej `GOOGLE_VERTEX_API_KEY` dla integracji z Vertex AI Virtual Try-On
 
 CI/CD i Hosting:
 - Github Actions do tworzenia pipeline’ów CI/CD

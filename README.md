@@ -34,7 +34,13 @@ Vestilook delivers photorealistic virtual try-on previews by combining a user’
    cd vestilook
    npm install
    ```
-3. Provision Supabase (Auth, PostgreSQL, Storage) and Google Cloud Vertex AI credentials, then create a local environment file (e.g. `.env`) with required keys such as Supabase URL/keys, storage bucket references, and VTON API access tokens. (Exact variable names are pending definition.)
+3. Provision Supabase (Auth, PostgreSQL, Storage) and Google Cloud Vertex AI credentials, then create a local environment file (e.g. `.env`) with the required keys:
+   - `SUPABASE_URL`, `SUPABASE_KEY`
+   - `GOOGLE_VERTEX_API_KEY`
+   - `PRIVATE_VERTEX_PROJECT_ID`, `PRIVATE_VERTEX_LOCATION`, `PRIVATE_VERTEX_VTO_MODEL`
+   - `PRIVATE_VTON_GARMENT_BUCKET`, `PRIVATE_VTON_PERSONA_BUCKET`, `PRIVATE_VTON_GENERATION_BUCKET`
+   - `PRIVATE_VTON_MAX_GARMENT_BYTES`, `PRIVATE_VTON_MIN_GARMENT_WIDTH`, `PRIVATE_VTON_MIN_GARMENT_HEIGHT`, `PRIVATE_VTON_ALLOWED_GARMENT_MIME`
+   - `VITE_VTON_DEFAULT_ETA_SECONDS`
 4. Start the development server:
    ```bash
    npm run dev

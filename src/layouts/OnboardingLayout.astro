@@ -1,0 +1,46 @@
+---
+import "../styles/global.css";
+
+interface Props {
+  title?: string;
+  description?: string;
+  canonical?: string;
+}
+
+const {
+  title = "Vestilook — Onboarding",
+  description = "Ukończ konfigurację konta Vestilook, aby rozpocząć wirtualne przymierzanie ubrań.",
+  canonical,
+} = Astro.props as Props;
+---
+
+<!doctype html>
+<html lang="pl">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <link rel="icon" type="image/png" href="/favicon.png" />
+    <meta name="generator" content={Astro.generator} />
+    <title>{title}</title>
+    <meta name="description" content={description} />
+    {canonical ? <link rel="canonical" href={canonical} /> : null}
+  </head>
+  <body class="min-h-svh bg-background text-foreground">
+    <a href="#onboarding-content" class="sr-only focus:not-sr-only focus:absolute focus:top-4 focus:left-4">
+      Przejdź do treści
+    </a>
+    <div class="relative flex min-h-svh flex-col overflow-hidden">
+      <div
+        class="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_top,_rgba(57,51,255,0.12),_transparent_55%)]"
+        aria-hidden="true"
+      >
+      </div>
+      <main
+        id="onboarding-content"
+        class="relative z-10 flex flex-1 flex-col bg-gradient-to-b from-background/95 via-background/98 to-background"
+      >
+        <slot />
+      </main>
+    </div>
+  </body>
+</html>

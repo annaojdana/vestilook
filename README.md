@@ -41,6 +41,7 @@ Vestilook delivers photorealistic virtual try-on previews by combining a user’
    - `PRIVATE_VTON_GARMENT_BUCKET`, `PRIVATE_VTON_PERSONA_BUCKET`, `PRIVATE_VTON_GENERATION_BUCKET`
    - `PRIVATE_VTON_MAX_GARMENT_BYTES`, `PRIVATE_VTON_MIN_GARMENT_WIDTH`, `PRIVATE_VTON_MIN_GARMENT_HEIGHT`, `PRIVATE_VTON_ALLOWED_GARMENT_MIME`
    - `VITE_VTON_DEFAULT_ETA_SECONDS`
+   - `PUBLIC_CONSENT_POLICY_URL` – link do aktualnej polityki przetwarzania wizerunku wyświetlanej w formularzu generacji.
 4. Start the development server:
    ```bash
    npm run dev
@@ -58,6 +59,7 @@ Vestilook delivers photorealistic virtual try-on previews by combining a user’
 - `npm run lint` — Run ESLint over the codebase.
 - `npm run lint:fix` — Fix autofixable ESLint issues.
 - `npm run format` — Format files with Prettier.
+- `npm run test` — Run Vitest in CI mode over unit/integration suites (m.in. walidacja ubrań i formularz generacji).
 - `npm run astro` — Run arbitrary Astro CLI commands.
 
 ## 6. Project Scope
@@ -65,7 +67,7 @@ Vestilook delivers photorealistic virtual try-on previews by combining a user’
 - **Out of scope (MVP):** Multiple personas, store catalog integrations or URL-based uploads, advanced persona editing, alternative AI models, extended GCP auth hardening.
 
 ## 7. Project Status
-MVP planning in progress with a six-week timeline. Immediate priorities include implementing the core VTON pipeline, hard qualitative rating loop, and Supabase life-cycle policies. Open risks: validating direct Supabase-to-Vertex AI asset ingestion and establishing the final success threshold for generated image quality.
+MVP planning in progress with a six-week timeline. Na etapie frontendu wdrożono widok `/generations/new`, który łączy walidację plików, ponowną zgodę i trigger kolejki VTON. Otwarte działania obejmują nadal implementację twardego ratingu oraz polityki czyszczenia Supabase. Główne ryzyka: walidacja ingestu aktywów z Supabase do Vertex AI i ustalenie progu jakości wygenerowanych stylizacji.
 
 ## 8. License
 License to be determined. No license file is currently included in the repository.

@@ -1,0 +1,197 @@
+---
+import type { AstroCookies } from "astro";
+import { Suspense } from "react";
+
+import Layout from "../../layouts/Layout.astro";
+import GenerationForm from "../../components/generations/GenerationForm.tsx";
+import type { ImageValidationConstraints, ProfileResponseDto } from "../../types.ts";
+
+interface PrefetchResult {
+  profile: ProfileResponseDto | null;
+  accessToken: string | null;
+  status: number | null;
+  error?: string;
+}
+
+async function prefetchProfile(cookies: AstroCookies): Promise<PrefetchResult> {
+  const accessTokenCookie = resolveSupabaseAccessToken(cookies);
+  const accessToken = accessTokenCookie?.value ?? null;
+
+  if (accessTokenCookie) {
+    ensureClientReadableCookie(accessTokenCookie.name, accessTokenCookie.value, cookies);
+  }
+
+  if (!accessToken) {
+    return { profile: null, accessToken: null, status: 401 };
+  }
+
+  try {
+    const response = await Astro.fetch("/api/profile", {
+      headers: {
+        Authorization: `Bearer ${accessToken}`,
+      },
+      credentials: "include",
+    });
+
+    if (response.status === 204) {
+      return { profile: null, accessToken, status: 204 };
+    }
+
+    if (!response.ok) {
+      console.warn("[generations/new] Failed to prefetch profile.", { status: response.status });
+      return { profile: null, accessToken, status: response.status };
+    }
+
+    const payload = (await response.json()) as ProfileResponseDto;
+    return { profile: payload, accessToken, status: response.status };
+  } catch (error) {
+    console.error("[generations/new] Profile prefetch request failed.", error);
+    return {
+      profile: null,
+      accessToken,
+      status: null,
+      error: error instanceof Error ? error.message : String(error),
+    };
+  }
+}
+
+function resolveSupabaseAccessToken(cookies: AstroCookies) {
+  const staticCandidates = ["sb-access-token", "sb-access-token-sb"];
+
+  for (const candidate of staticCandidates) {
+    const cookie = cookies.get(candidate);
+    if (cookie?.value) {
+      return cookie;
+    }
+  }
+
+  const dynamicCookie = cookies
+    .getAll()
+    .find((entry) => entry.name.startsWith("sb-") && entry.name.endsWith("-access-token"));
+
+  if (dynamicCookie?.value) {
+    return dynamicCookie;
+  }
+
+  return null;
+}
+
+function ensureClientReadableCookie(name: string, value: string, cookies: AstroCookies) {
+  cookies.set(name, value, {
+    path: "/",
+    httpOnly: false,
+    sameSite: "lax",
+    secure: import.meta.env.PROD,
+  });
+}
+
+function buildLoginRedirect(targetPath: string) {
+  const loginPath = import.meta.env.PUBLIC_AUTH_LOGIN_PATH ?? "/auth/login";
+  const redirectParam = encodeURIComponent(targetPath);
+  return `${loginPath}?redirect=${redirectParam}`;
+}
+
+function resolveImageConstraints(): ImageValidationConstraints {
+  const maxBytes = parseIntegerEnv(import.meta.env.PRIVATE_VTON_MAX_GARMENT_BYTES, 7_340_032);
+  const minWidth = parseIntegerEnv(import.meta.env.PRIVATE_VTON_MIN_GARMENT_WIDTH, 1024);
+  const minHeight = parseIntegerEnv(import.meta.env.PRIVATE_VTON_MIN_GARMENT_HEIGHT, 1024);
+  const allowedMimeRaw = import.meta.env.PRIVATE_VTON_ALLOWED_GARMENT_MIME ?? "image/jpeg,image/png";
+  const allowedMimeTypes = allowedMimeRaw
+    .split(",")
+    .map((value) => value.trim())
+    .filter(Boolean);
+
+  return {
+    maxBytes,
+    minWidth,
+    minHeight,
+    allowedMimeTypes: allowedMimeTypes.length > 0 ? allowedMimeTypes : ["image/jpeg", "image/png"],
+  };
+}
+
+function parseIntegerEnv(value: unknown, fallback: number): number {
+  if (typeof value === "number" && Number.isFinite(value)) {
+    return Math.floor(value);
+  }
+
+  if (typeof value === "string") {
+    const parsed = Number.parseInt(value, 10);
+    if (Number.isFinite(parsed)) {
+      return parsed;
+    }
+  }
+
+  return fallback;
+}
+
+const prefetch = await prefetchProfile(Astro.cookies);
+
+if (prefetch.status === 401 || prefetch.status === 403) {
+  return Astro.redirect(buildLoginRedirect(Astro.url.pathname));
+}
+
+const personaMissing = !prefetch.profile?.persona;
+const defaultRetentionHours = 48;
+const consentPolicyUrl = import.meta.env.PUBLIC_CONSENT_POLICY_URL ?? "#";
+const constraints = resolveImageConstraints();
+const generationDetailsBasePath = "/generations";
+const onboardingPersonaPath = "/onboarding/persona";
+---
+
+<Layout title="Vestilook — Nowa generacja">
+  <main class="min-h-screen bg-gradient-to-b from-background via-muted/30 to-background pb-16 pt-10 text-foreground dark:via-muted/20">
+    <section class="mx-auto grid w-full max-w-6xl gap-10 px-6 lg:grid-cols-[2fr_1fr] lg:items-start lg:gap-14">
+      <div class="space-y-4 lg:sticky lg:top-24">
+        <p class="text-xs font-semibold uppercase tracking-[0.3em] text-primary">Generowanie</p>
+        <h1 class="text-balance text-3xl font-bold tracking-tight sm:text-4xl">Nowa stylizacja Vertex AI</h1>
+        <p class="text-pretty text-base text-muted-foreground lg:text-lg">
+          Wgraj zdjęcie ubrania, odśwież zgodę na przetwarzanie wizerunku i uruchom kolejkę Google Vertex AI Virtual Try-On.
+          Zachowaj limit darmowych generacji, wybierając odpowiednią retencję wyników.
+        </p>
+      </div>
+
+      {prefetch.status === 204 || personaMissing ? (
+        <div class="rounded-2xl border border-dashed border-muted-foreground/40 bg-background/80 p-6 text-muted-foreground shadow-sm backdrop-blur dark:bg-background/60 lg:col-span-2">
+          <h2 class="text-lg font-semibold text-foreground">Dodaj bazową personę</h2>
+          <p class="mt-2 text-sm">
+            Aby wygenerować stylizację, przejdź najpierw przez onboarding i dodaj zdjęcie referencyjne.
+          </p>
+          <a
+            class="mt-4 inline-flex w-fit items-center rounded-md bg-primary px-4 py-2 text-sm font-medium text-primary-foreground transition hover:bg-primary/90 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2"
+            href={onboardingPersonaPath}
+          >
+            Przejdź do uzupełnienia profilu
+          </a>
+        </div>
+      ) : prefetch.error ? (
+        <div class="rounded-2xl border border-destructive/40 bg-destructive/10 p-6 text-destructive shadow-sm lg:col-span-2">
+          <h2 class="text-lg font-semibold">Nie udało się pobrać danych profilu</h2>
+          <p class="mt-2 text-sm">
+            Spróbuj odświeżyć stronę lub wróć później. Jeśli problem będzie się powtarzał, skontaktuj się z
+            pomocą techniczną.
+          </p>
+        </div>
+      ) : prefetch.profile ? (
+        <Suspense fallback={(<div class="text-sm text-muted-foreground">Ładowanie formularza...</div>)}>
+          <div class="rounded-2xl border border-muted/20 bg-background/80 p-6 shadow-xl shadow-primary/5 backdrop-blur dark:border-muted/30 dark:bg-background/70">
+            <GenerationForm
+              client:load
+              initialProfile={prefetch.profile}
+              defaultRetention={defaultRetentionHours}
+              consentPolicyUrl={consentPolicyUrl}
+              constraints={constraints}
+              detailsBasePath={generationDetailsBasePath}
+            />
+          </div>
+        </Suspense>
+      ) : (
+        <div class="rounded-2xl border border-muted/40 bg-muted/10 p-6 text-muted-foreground lg:col-span-2">
+          <h2 class="text-lg font-semibold text-foreground">Brak danych profilu</h2>
+          <p class="mt-2 text-sm">
+            Nie udało się odczytać profilu użytkownika. Spróbuj odświeżyć stronę lub zaloguj się ponownie.
+          </p>
+        </div>
+      )}
+    </section>
+  </main>
+</Layout>

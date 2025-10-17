@@ -8,9 +8,12 @@ export default defineConfig({
     },
   },
   test: {
-    include: ["src/**/*.test.{ts,tsx}"],
+    include: ["src/**/*.test.{ts,tsx}", "tests/**/*.test.{ts,tsx}"],
     environment: "node",
-    environmentMatchGlobs: [["src/components/onboarding/**/*.test.{ts,tsx}", "jsdom"]],
+    environmentMatchGlobs: [
+      ["src/components/onboarding/**/*.test.{ts,tsx}", "jsdom"],
+      ["tests/**/*.test.{ts,tsx}", "jsdom"],
+    ],
     setupFiles: ["./tests/setup.ts"],
     typecheck: {
       tsconfig: "./tsconfig.json",

@@ -1,4 +1,4 @@
-import { useId, type FC, type FormEvent } from "react";
+import { useId, type FC, type FormEvent, type RefObject } from "react";
 
 import { Checkbox } from "@/components/ui/checkbox";
 import { Label } from "@/components/ui/label";
@@ -17,6 +17,7 @@ interface ConsentFormSectionProps {
   error: ConsentErrorState | null;
   feedbackId: string;
   descriptionId: string;
+  feedbackRef: RefObject<HTMLDivElement>;
   onCheckedChange(value: boolean): void;
   onSubmit(): void;
   onRetry(): void;
@@ -31,6 +32,7 @@ const ConsentFormSection: FC<ConsentFormSectionProps> = ({
   error,
   feedbackId,
   descriptionId,
+  feedbackRef,
   onCheckedChange,
   onSubmit,
   onRetry,
@@ -88,7 +90,11 @@ const ConsentFormSection: FC<ConsentFormSectionProps> = ({
             </div>
           ) : null}
         </fieldset>
-        <InlineFeedbackRegion id={feedbackId} error={resolveDisplayedError(error, showValidationError)} />
+        <InlineFeedbackRegion
+          id={feedbackId}
+          ref={feedbackRef}
+          error={resolveDisplayedError(error, showValidationError)}
+        />
       </div>
       <PrimaryActionBar
         primary={{ label: "Akceptuję", onClick: onSubmit }}

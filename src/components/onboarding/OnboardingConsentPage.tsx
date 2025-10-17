@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useMemo, useRef, useState, type FC } from "react";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
+import { toast } from "sonner";
 
 import { Button } from "@/components/ui/button";
 import { supabaseClient } from "@/db/supabase.client.ts";
@@ -9,6 +10,7 @@ import type { ConsentErrorState, ConsentFormState, ConsentViewModel } from "./co
 import { ConsentApiError } from "./consent-types.ts";
 import { useAcceptConsentMutation } from "./useAcceptConsentMutation.ts";
 import { useConsentStatusQuery } from "./useConsentStatusQuery.ts";
+import { useConsentRedirect } from "./useConsentRedirect.ts";
 
 interface OnboardingConsentPageProps {
   policyUrl: string;
@@ -47,10 +49,9 @@ interface ConsentPageContentProps {
 
 const ConsentPageContent: FC<ConsentPageContentProps> = ({ policyUrl, nextPath }) => {
   const focusContainerRef = useRef<HTMLDivElement>(null);
-  const onboardingRedirectTriggeredRef = useRef(false);
+  const feedbackRef = useRef<HTMLDivElement>(null);
   const loginRedirectTriggeredRef = useRef(false);
   const [errorState, setErrorState] = useState<ConsentErrorState | null>(null);
-  const [isRedirecting, setIsRedirecting] = useState(false);
   const [formState, setFormState] = useState<ConsentFormState>({
     isCheckboxChecked: false,
     showValidationError: false,
@@ -85,15 +86,14 @@ const ConsentPageContent: FC<ConsentPageContentProps> = ({ policyUrl, nextPath }
     window.location.replace("/login");
   }, []);
 
-  const triggerNextStepRedirect = useCallback(() => {
-    if (!viewModel || onboardingRedirectTriggeredRef.current) {
-      return;
-    }
-
-    onboardingRedirectTriggeredRef.current = true;
-    setIsRedirecting(true);
-    window.location.assign(nextPath);
-  }, [nextPath, viewModel]);
+  const {
+    triggerRedirect: triggerNextStepRedirect,
+    resetRedirect,
+    isRedirecting,
+  } = useConsentRedirect({
+    viewModel,
+    nextPath,
+  });
 
   const mutation = useAcceptConsentMutation({
     onError: (mutationError) => {
@@ -105,10 +105,13 @@ const ConsentPageContent: FC<ConsentPageContentProps> = ({ policyUrl, nextPath }
       if (mutationError.code === "conflict") {
         void refetch();
       }
+
+      presentErrorFeedback(mutationError);
       setErrorState(mapApiErrorToState(mutationError));
     },
     onSuccess: () => {
       setErrorState(null);
+      toast.success("Dziękujemy! Zgoda została zapisana.");
       triggerNextStepRedirect();
     },
   });
@@ -126,11 +129,14 @@ const ConsentPageContent: FC<ConsentPageContentProps> = ({ policyUrl, nextPath }
       return;
     }
 
+    presentErrorFeedback(queryError);
     setErrorState(mapApiErrorToState(queryError));
   }, [handleUnauthorized, queryError, queryStatus]);
 
+  const requiredVersion = viewModel?.requiredVersion;
+
   useEffect(() => {
-    if (!viewModel) {
+    if (!requiredVersion) {
       return;
     }
 
@@ -138,20 +144,7 @@ const ConsentPageContent: FC<ConsentPageContentProps> = ({ policyUrl, nextPath }
       isCheckboxChecked: false,
       showValidationError: false,
     });
-  }, [viewModel]);
-
-  useEffect(() => {
-    if (!viewModel) {
-      return;
-    }
-
-    const isAlreadyCompliant =
-      viewModel.isCompliant && viewModel.acceptedVersion && viewModel.acceptedVersion === viewModel.requiredVersion;
-
-    if (isAlreadyCompliant) {
-      triggerNextStepRedirect();
-    }
-  }, [triggerNextStepRedirect, viewModel]);
+  }, [requiredVersion]);
 
   useEffect(() => {
     if (isPending || !viewModel) {
@@ -162,16 +155,24 @@ const ConsentPageContent: FC<ConsentPageContentProps> = ({ policyUrl, nextPath }
     focusTarget?.focus();
   }, [isPending, viewModel]);
 
+  useEffect(() => {
+    if (!errorState) {
+      return;
+    }
+
+    feedbackRef.current?.focus();
+  }, [errorState]);
+
   const handleRetry = useCallback(() => {
     setErrorState(null);
-    onboardingRedirectTriggeredRef.current = false;
-    setIsRedirecting(false);
+    resetRedirect();
     setFormState({
       isCheckboxChecked: false,
       showValidationError: false,
     });
+    toast.info("Ponawiamy próbę pobrania treści zgody.");
     void refetch();
-  }, [refetch]);
+  }, [refetch, resetRedirect]);
 
   const handleCheckboxChange = useCallback(
     (value: boolean) => {
@@ -194,7 +195,9 @@ const ConsentPageContent: FC<ConsentPageContentProps> = ({ policyUrl, nextPath }
 
     if (!formState.isCheckboxChecked) {
       setFormState((prev) => ({ ...prev, showValidationError: true }));
-      setErrorState(createValidationErrorState());
+      const validationError = createValidationErrorState();
+      setErrorState(validationError);
+      presentErrorFeedback(validationError);
       return;
     }
 
@@ -237,6 +240,7 @@ const ConsentPageContent: FC<ConsentPageContentProps> = ({ policyUrl, nextPath }
           isSubmitting={mutation.isPending || isRefetching}
           isActionDisabled={isActionDisabled}
           error={errorState}
+          feedbackRef={feedbackRef}
           onCheckboxChange={handleCheckboxChange}
           onSubmit={handleSubmit}
           onRetry={handleRetry}
@@ -334,6 +338,30 @@ function mapApiErrorToState(error: ConsentApiError): ConsentErrorState {
         message: "Twoja sesja wygasła. Zaloguj się ponownie.",
         details: error.details,
       };
+  }
+}
+
+function presentErrorFeedback(error: ConsentApiError | ConsentErrorState) {
+  switch (error.code) {
+    case "network":
+      toast.error("Problem z połączeniem sieciowym. Sprawdź internet i spróbuj ponownie.");
+      break;
+    case "server_error":
+      toast.error("Serwer Vestilook ma chwilowe trudności. Spróbuj ponownie za moment.");
+      break;
+    case "bad_request":
+      toast.warning("Przesłane dane zgody są nieaktualne. Odśwież widok, aby pobrać aktualną treść.");
+      break;
+    case "conflict":
+      toast.info("Pojawiła się nowa wersja zgody. Odświeżamy widok.");
+      break;
+    case "unauthorized":
+      toast.info("Twoja sesja wygasła. Przekierowujemy do logowania.");
+      break;
+    case "validation":
+      break;
+    default:
+      toast.error("Nieznany błąd. Spróbuj ponownie później.");
   }
 }
 

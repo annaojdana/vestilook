@@ -199,6 +199,125 @@ export interface GenerationListResponseDto {
   nextCursor: string | null;
 }
 
+// ---------------------------
+// Onboarding persona view
+// ---------------------------
+
+export interface ConsentRequirement {
+  requiredVersion: string;
+  acceptedVersion: string | null;
+  acceptedAt: string | null;
+  isCompliant: boolean;
+}
+
+export interface PersonaViewModel {
+  persona: PersonaAssetMetadata | null;
+  consent: ConsentRequirement;
+  quota: FreeQuotaSnapshot;
+  canContinue: boolean;
+}
+
+export interface UploadConstraints {
+  allowedMimeTypes: string[];
+  minWidth: number;
+  minHeight: number;
+  maxBytes: number;
+  retentionHours: number;
+}
+
+export const PERSONA_UPLOAD_CONSTRAINTS: UploadConstraints = {
+  allowedMimeTypes: ["image/jpeg", "image/png"],
+  minWidth: 1024,
+  minHeight: 1024,
+  maxBytes: 15 * 1024 * 1024,
+  retentionHours: 72,
+};
+
+export type PersonaUploaderStatus = "idle" | "ready" | "validating" | "uploading" | "success" | "error";
+
+export type PersonaValidationErrorCode =
+  | "missing_file"
+  | "unsupported_mime"
+  | "invalid_magic_number"
+  | "invalid_dimensions"
+  | "below_min_resolution"
+  | "exceeds_max_size"
+  | "encode_failure"
+  | "checksum_failure"
+  | "consent_required"
+  | "network_error"
+  | "server_error";
+
+export interface PersonaValidationError {
+  code: PersonaValidationErrorCode;
+  message: string;
+  hint?: string;
+  details?: Record<string, unknown>;
+  severity?: "error" | "warning";
+}
+
+export type PersonaPreviewStatus = "empty" | "ready" | "uploading" | "error";
+
+export interface PersonaPreviewModel {
+  status: PersonaPreviewStatus;
+  src: string | null;
+  alt: string;
+  width: number | null;
+  height: number | null;
+  contentType: string | null;
+  sizeBytes?: number | null;
+  updatedAt?: string | null;
+  checksum?: string;
+  errorMessage?: string;
+}
+
+export type UploadStage = "idle" | "preparing" | "uploading" | "finalizing";
+
+export interface UploadProgress {
+  stage: UploadStage;
+  loadedBytes: number;
+  totalBytes: number;
+  percentage: number;
+}
+
+export interface PersonaUploadState {
+  status: PersonaUploaderStatus;
+  selectedFile: File | null;
+  sanitizedBlob: Blob | null;
+  preview: PersonaPreviewModel;
+  validationErrors: PersonaValidationError[];
+  progress: UploadProgress | null;
+}
+
+export interface DropzoneValidationResult {
+  accepted: boolean;
+  errors: PersonaValidationError[];
+}
+
+export interface SanitizedPersonaUploadCommand extends PersonaUploadCommand {
+  checksum: string;
+  width: number;
+  height: number;
+  size: number;
+}
+
+export type ToastVariant = "default" | "info" | "success" | "warning" | "error" | "progress";
+
+export interface ToastActionPayload {
+  label: string;
+  onSelect: () => void;
+}
+
+export interface ToastPayload {
+  id?: string;
+  title: string;
+  description?: string;
+  variant: ToastVariant;
+  durationMs?: number | null;
+  action?: ToastActionPayload;
+  dismissible?: boolean;
+}
+
 export interface GenerationDetailResponseDto {
   id: VtonGenerationRow["id"];
   status: GenerationStatus;

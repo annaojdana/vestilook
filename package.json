@@ -9,6 +9,7 @@
     "astro": "astro",
     "lint": "eslint .",
     "lint:fix": "eslint . --fix",
+    "test": "vitest run --coverage=false",
     "format": "prettier --write ."
   },
   "dependencies": {
@@ -50,6 +51,7 @@
   "devDependencies": {
     "@eslint/compat": "1.2.7",
     "@eslint/js": "9.23.0",
+    "@testing-library/react": "^16.0.0",
     "@types/busboy": "^1.5.4",
     "@typescript-eslint/eslint-plugin": "8.28.0",
     "@typescript-eslint/parser": "8.28.0",
@@ -65,9 +67,11 @@
     "eslint-plugin-react-hooks": "5.2.0",
     "husky": "9.1.7",
     "lint-staged": "15.5.0",
+    "msw": "^2.7.0",
     "prettier-plugin-astro": "0.14.1",
     "typescript-eslint": "8.28.0",
-    "vitest": "^2.1.6"
+    "vitest": "^2.1.6",
+    "jsdom": "^25.0.1"
   },
   "lint-staged": {
     "*.{ts,tsx,astro}": [

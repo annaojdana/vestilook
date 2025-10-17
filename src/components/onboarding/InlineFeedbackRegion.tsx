@@ -40,6 +40,7 @@ export const InlineFeedbackRegion = forwardRef<HTMLDivElement, InlineFeedbackReg
         id={id}
         role={text ? "alert" : "status"}
         aria-live="assertive"
+        tabIndex={text ? -1 : undefined}
         className={cn(
           "flex min-h-[1.5rem] items-start gap-2 text-sm transition-opacity",
           toneClasses[resolvedTone],

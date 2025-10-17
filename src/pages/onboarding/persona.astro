@@ -1,0 +1,104 @@
+---
+import type { AstroCookies } from "astro";
+import { Suspense } from "react";
+
+import OnboardingLayout from "../../layouts/OnboardingLayout.astro";
+import OnboardingPersonaShell from "../../components/onboarding/OnboardingPersonaShell.tsx";
+import type { ProfileResponseDto } from "../../types.ts";
+
+interface PrefetchResult {
+  profile: ProfileResponseDto | null;
+  accessToken: string | null;
+}
+
+async function prefetchProfile(cookies: AstroCookies): Promise<PrefetchResult> {
+  const accessTokenCookie = resolveSupabaseAccessToken(cookies);
+  const accessToken = accessTokenCookie?.value ?? null;
+
+  if (accessTokenCookie) {
+    ensureClientReadableCookie(accessTokenCookie.name, accessTokenCookie.value, cookies);
+  }
+
+  if (!accessToken) {
+    return { profile: null, accessToken: null };
+  }
+
+  try {
+    const response = await Astro.fetch("/api/profile", {
+      headers: {
+        Authorization: `Bearer ${accessToken}`,
+      },
+      credentials: "include",
+    });
+
+    if (response.status === 204) {
+      return { profile: null, accessToken };
+    }
+
+    if (!response.ok) {
+      console.warn("[onboarding/persona] Failed to prefetch profile payload.", {
+        status: response.status,
+      });
+      return { profile: null, accessToken };
+    }
+
+    const payload = (await response.json()) as ProfileResponseDto;
+    return { profile: payload, accessToken };
+  } catch (error) {
+    console.error("[onboarding/persona] Prefetch profile request failed.", error);
+    return { profile: null, accessToken };
+  }
+}
+
+function resolveSupabaseAccessToken(cookies: AstroCookies) {
+  const knownNames = ["sb-access-token", "sb-access-token-sb"];
+  for (const candidate of knownNames) {
+    const cookie = cookies.get(candidate);
+    if (cookie?.value) {
+      return cookie;
+    }
+  }
+
+  const dynamicCookie = cookies
+    .getAll()
+    .find((entry) => entry.name.startsWith("sb-") && entry.name.endsWith("-access-token"));
+  if (dynamicCookie?.value) {
+    return dynamicCookie;
+  }
+
+  return null;
+}
+
+function ensureClientReadableCookie(name: string, value: string, cookies: AstroCookies) {
+  cookies.set(name, value, {
+    path: "/",
+    httpOnly: false,
+    sameSite: "lax",
+    secure: import.meta.env.PROD,
+  });
+}
+
+const canonical = Astro.site ? new URL(Astro.url.pathname, Astro.site).href : undefined;
+const nextStepPath = "/onboarding/garment";
+
+const prefetch = await prefetchProfile(Astro.cookies);
+const shellProps = {
+  profile: prefetch.profile,
+  initialAccessToken: prefetch.accessToken,
+  nextPath: nextStepPath,
+};
+---
+
+<OnboardingLayout
+  title="Vestilook — Dodaj swoją personę bazową"
+  description="Prześlij zdjęcie referencyjne, aby rozpocząć personalizowane stylizacje w Vestilook."
+  canonical={canonical}
+>
+  <div class="flex flex-1 flex-col items-center justify-center bg-gradient-to-br from-primary/10 via-background to-accent/20 px-6 py-12">
+    <div class="relative z-10 flex w-full max-w-5xl flex-1 items-stretch justify-center">
+      <Suspense fallback={(<div class="flex items-center justify-center text-muted-foreground">Ładowanie...</div>)}>
+        <OnboardingPersonaShell client:load profile={shellProps.profile} initialAccessToken={shellProps.initialAccessToken} nextPath={shellProps.nextPath} />
+      </Suspense>
+    </div>
+  </div>
+</OnboardingLayout>

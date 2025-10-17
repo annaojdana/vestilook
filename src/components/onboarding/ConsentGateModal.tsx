@@ -1,4 +1,4 @@
-import { useEffect, useId, useRef, type FC } from "react";
+import { useEffect, useId, useRef, type FC, type RefObject } from "react";
 
 import type { ConsentErrorState, ConsentFormState, ConsentViewModel } from "./consent-types.ts";
 import ConsentFormSection from "./ConsentFormSection.tsx";
@@ -12,6 +12,7 @@ interface ConsentGateModalProps {
   isSubmitting: boolean;
   isActionDisabled: boolean;
   error: ConsentErrorState | null;
+  feedbackRef: RefObject<HTMLDivElement>;
   onCheckboxChange: CheckboxChangeHandler;
   onSubmit(): void;
   onRetry(): void;
@@ -26,6 +27,7 @@ const ConsentGateModal: FC<ConsentGateModalProps> = ({
   isSubmitting,
   isActionDisabled,
   error,
+  feedbackRef,
   onCheckboxChange,
   onSubmit,
   onRetry,
@@ -116,6 +118,7 @@ const ConsentGateModal: FC<ConsentGateModalProps> = ({
           error={error}
           feedbackId={feedbackId}
           descriptionId={formDescriptionId}
+          feedbackRef={feedbackRef}
           onCheckedChange={onCheckboxChange}
           onSubmit={onSubmit}
           onRetry={onRetry}

@@ -6,6 +6,11 @@ Ten projekt wykorzystuje @shadcn/ui dla komponentów interfejsu użytkownika. S�
 
 Komponenty są dostępne w folderze `src/components/ui`, zgodnie z aliasami z pliku `components.json`
 
+### Nowe użycia w procesie onboardingu
+
+- `Button`, `Badge`, `Checkbox`, `Dialog`, `Progress`, `Sonner` oraz `Tooltip` są wykorzystywane w widokach `/onboarding/consent` oraz `/onboarding/persona` (np. `ConsentStatusBanner`, `PersonaUploader`, `ProgressToast`).
+- Globalny `Toaster` z `sonner` jest montowany w `OnboardingPersonaShell` i obsługuje wariant `progress` z customowym portalem (`ProgressToast`).
+
 ## Wykorzystanie komponentu
 
 Zaimportuj komponent zgodnie ze skonfigurowanym aliasem `@/`

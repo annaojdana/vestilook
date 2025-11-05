@@ -1,0 +1,44 @@
+---
+/**
+ * Email Confirmation Callback Handler
+ *
+ * This page handles the callback from Supabase email confirmation links.
+ * When users click the confirmation link in their email, they are redirected here.
+ * The page extracts the token from the URL and completes the authentication process.
+ */
+import { createSupabaseServerClient } from '../../db/supabase.client';
+
+export const prerender = false;
+
+// Get the code from URL (Supabase PKCE flow)
+const code = Astro.url.searchParams.get('code');
+const next = Astro.url.searchParams.get('next') ?? '/onboarding/consent';
+
+if (code) {
+  try {
+    const supabase = createSupabaseServerClient({
+      cookies: Astro.cookies,
+      headers: Astro.request.headers,
+    });
+
+    // Exchange the code for a session
+    const { data, error } = await supabase.auth.exchangeCodeForSession(code);
+
+    if (error) {
+      console.error('Email confirmation error:', error);
+      return Astro.redirect(`/auth/login?error=confirmation-failed`);
+    }
+
+    if (data?.session) {
+      // Successfully confirmed - redirect to onboarding or specified next page
+      return Astro.redirect(next);
+    }
+  } catch (err) {
+    console.error('Unexpected callback error:', err);
+    return Astro.redirect(`/auth/login?error=unexpected`);
+  }
+}
+
+// If no code or something went wrong, redirect to login
+return Astro.redirect('/auth/login?error=invalid-link');
+---

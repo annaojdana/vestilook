@@ -9,6 +9,7 @@ const canonical = Astro.site
   : undefined;
 const redirectTo = Astro.url.searchParams.get('redirect') ?? '/onboarding/consent';
 const errorMessage = Astro.url.searchParams.get('error') ?? undefined;
+const infoMessage = Astro.url.searchParams.get('message') ?? undefined;
 ---
 
 <AuthLayout
@@ -19,6 +20,6 @@ const errorMessage = Astro.url.searchParams.get('error') ?? undefined;
   <div
     class="flex min-h-screen items-center justify-center bg-gradient-to-br from-accent/30 via-transparent to-primary/10 px-6 py-12"
   >
-    <LoginForm client:load redirectTo={redirectTo} errorMessage={errorMessage} />
+    <LoginForm client:load redirectTo={redirectTo} errorMessage={errorMessage} infoMessage={infoMessage} />
   </div>
 </AuthLayout>

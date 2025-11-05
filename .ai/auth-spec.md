@@ -2,10 +2,51 @@
 
 ## Informacje ogólne
 
-**Wersja dokumentu:** 1.0
-**Data:** 2025-11-05
+**Wersja dokumentu:** 1.1
+**Data ostatniej aktualizacji:** 2025-11-05
 **Zakres:** Rejestracja, logowanie, wylogowanie i odzyskiwanie hasła użytkowników
 **Stack:** Astro 5 (SSR), React 19, TypeScript 5, Supabase Auth
+
+---
+
+## ⚠️ KLUCZOWE ZMIANY WZGLĘDEM WERSJI 1.0
+
+**Data reconciliacji z PRD:** 2025-11-05
+
+### Zmiany wprowadzone po analizie zgodności z PRD:
+
+1. **Email Confirmation: WYŁĄCZONE**
+   - **Poprzednio:** Wymagane potwierdzenie emaila po rejestracji
+   - **Obecnie:** Użytkownik może korzystać z aplikacji natychmiast po rejestracji
+   - **Uzasadnienie:** PRD (US-001) nie wymienia weryfikacji emaila. Priorytet: szybki onboarding bez dodatkowych kroków
+
+2. **Flow rejestracji uproszczony**
+   - **Usunięto:** Kroki wysyłania emaila weryfikacyjnego i klikania linku
+   - **Dodano:** Natychmiastowe utworzenie sesji po pomyślnej rejestracji
+
+3. **Komunikaty użytkownika zaktualizowane**
+   - Usunięto wzmianki o "sprawdzeniu skrzynki email"
+   - Dodano komunikat: "Konto utworzone pomyślnie! Witamy w Vestilook."
+
+### Co jest W ZAKRESIE tego dokumentu:
+- ✅ Rejestracja użytkownika (email + hasło)
+- ✅ Logowanie użytkownika
+- ✅ Wylogowanie
+- ✅ Resetowanie hasła (przez email)
+- ✅ Zarządzanie sesją (JWT tokens)
+- ✅ Middleware ochrony ścieżek
+- ✅ Trigger bazy danych dla profili użytkowników
+- ✅ Inicjalizacja quota darmowych generacji
+
+### Co jest POZA ZAKRESEM tego dokumentu:
+- ❌ System zgody (consent) - opisany w osobnej specyfikacji
+- ❌ Upload i zarządzanie Personą Bazową
+- ❌ Generowanie wizualizacji VTON
+- ❌ Walidacja i przetwarzanie obrazów
+- ❌ System oceny jakości
+- ❌ Zarządzanie plikami tymczasowymi (lifecycle management)
+
+**Te funkcje są pokryte w innych specyfikacjach technicznych lub w PRD.**
 
 ---
 
@@ -371,22 +412,24 @@ interface RegisterFormState {
 
 **Komunikat sukcesu:**
 ```
-"Konto zostało utworzone! Sprawdź swoją skrzynkę email, aby potwierdzić adres."
+"Konto utworzone pomyślnie! Witamy w Vestilook."
 ```
+**UWAGA:** Usunięto wzmiankę o weryfikacji emaila, zgodnie z konfiguracją bez email confirmation.
 
 **Scenariusze:**
-1. **Happy path (z email confirmation):**
+1. **Happy path (bez email confirmation - zgodnie z PRD):**
    - Użytkownik wypełnia email, hasło, powtórzenie hasła
    - Kliknięcie "Zarejestruj się"
-   - `supabaseClient.auth.signUp({ email, password, options: { emailRedirectTo: window.location.origin + redirectTo } })`
-   - Sukces → Supabase wysyła email z linkiem potwierdzającym
-   - Wyświetlenie komunikatu sukcesu w `<Alert />` (wariant `success`)
-   - Formularz jest ukryty, pokazuje się instrukcja sprawdzenia emaila
+   - `supabaseClient.auth.signUp({ email, password })`
+   - Sukces → Supabase automatycznie tworzy sesję (bez wymagania potwierdzenia emaila)
+   - Toast sukcesu: "Konto utworzone pomyślnie!"
+   - Automatyczny redirect na `redirectTo` (domyślnie `/onboarding/consent`)
+   - **UWAGA:** Email confirmation jest WYŁĄCZONE zgodnie z PRD, aby przyspieszyć onboarding
 
 2. **Email już istnieje:**
-   - Supabase zwraca błąd (zazwyczaj cichy – dla bezpieczeństwa może zwrócić sukces)
-   - Obsługa zgodnie z konfiguracją Supabase: jeśli włączone "confirm email", zawsze wyświetl komunikat sukcesu
-   - W przeciwnym razie: wyświetlenie błędu "Ten adres email jest już zarejestrowany"
+   - Supabase zwraca błąd `"User already registered"`
+   - Wyświetlenie komunikatu: "Ten adres email jest już zarejestrowany"
+   - Link do `/auth/login` – "Masz już konto? Zaloguj się"
 
 3. **Błąd walidacji:**
    - React Hook Form wyświetla błędy pod odpowiednimi polami
@@ -432,21 +475,26 @@ const onSubmit = async (values: RegisterFormValues) => {
   const { data, error } = await supabaseClient.auth.signUp({
     email: values.email,
     password: values.password,
-    options: {
-      emailRedirectTo: `${window.location.origin}${redirectTo}`,
-    },
+    // UWAGA: Bez emailRedirectTo, ponieważ email confirmation jest WYŁĄCZONE
   });
 
   if (error) {
-    setError('Wystąpił problem z rejestracją. Spróbuj ponownie.');
+    // Obsługa błędu - sprawdź czy użytkownik już istnieje
+    if (error.message.includes('already registered')) {
+      setError('Ten adres email jest już zarejestrowany');
+    } else {
+      setError('Wystąpił problem z rejestracją. Spróbuj ponownie.');
+    }
     setIsSubmitting(false);
     return;
   }
 
-  setSuccessMessage(
-    'Konto zostało utworzone! Sprawdź swoją skrzynkę email, aby potwierdzić adres.'
-  );
-  setIsSubmitting(false);
+  // Sukces - użytkownik jest od razu zalogowany (sesja utworzona automatycznie)
+  if (data?.session) {
+    toast.success('Konto utworzone pomyślnie! Witamy w Vestilook.');
+    // Redirect na onboarding
+    window.location.href = redirectTo;
+  }
 };
 ```
 
@@ -764,17 +812,20 @@ export const LogoutButton: FC<LogoutButtonProps> = ({
 
 ### 1.7. Scenariusze UX
 
-#### Scenariusz 1: Nowy użytkownik (rejestracja → potwierdzenie email → onboarding)
+#### Scenariusz 1: Nowy użytkownik (rejestracja → onboarding)
+
+⚠️ **ZAKTUALIZOWANE:** Usunięto krok weryfikacji emaila zgodnie z PRD
 
 1. Użytkownik wchodzi na `/auth/register`
-2. Wypełnia formularz rejestracji
+2. Wypełnia formularz rejestracji (email, hasło, potwierdzenie hasła)
 3. Klika "Zarejestruj się"
-4. Widzi komunikat sukcesu: "Sprawdź swoją skrzynkę email"
-5. Otwiera email od Supabase i klika link potwierdzający
-6. Zostaje przekierowany na `/onboarding/consent`
-7. Akceptuje politykę zgody
-8. Upload persony na `/onboarding/persona`
-9. Generacja stylizacji na `/generations/new`
+4. Toast sukcesu: "Konto utworzone pomyślnie! Witamy w Vestilook."
+5. **Natychmiastowe przekierowanie** na `/onboarding/consent` (sesja aktywna od razu)
+6. Akceptuje politykę zgody na przetwarzanie wizerunku
+7. Upload persony na `/onboarding/persona`
+8. Generacja stylizacji na `/generations/new`
+
+**ZMIANA:** Usunięto kroki 4-5 z oryginalnego scenariusza (sprawdzanie emaila i klikanie linku)
 
 #### Scenariusz 2: Istniejący użytkownik (logowanie)
 
@@ -1157,10 +1208,11 @@ const user = Astro.locals.user;
 
 **Konfiguracja Supabase Auth:**
 - Panel Supabase → Authentication → Settings
-- **Email confirmation:** Włączone (wymaga potwierdzenia emaila po rejestracji)
-- **Password requirements:** Min. 8 znaków (domyślnie 6, ale zwiększamy do 8 przez walidację kliencką)
-- **Email templates:** Customizacja szablonów emaili (opcjonalnie)
+- **Email confirmation:** ⚠️ **WYŁĄCZONE** (zgodnie z PRD - użytkownik powinien móc od razu korzystać z aplikacji po rejestracji)
+- **Password requirements:** Min. 8 znaków dla nowych rejestracji (Supabase domyślnie: 6 znaków, ale walidacja kliencka wymusza 8)
+- **Email templates:** Customizacja szablonów emaili dla resetu hasła
 - **Redirect URLs:** Dodanie `http://localhost:3000/auth/update-password` i `https://vestilook.com/auth/update-password` do whitelist
+- **UWAGA:** PRD nie wymaga weryfikacji emaila. Priorytetem jest szybki onboarding bez dodatkowych kroków.
 
 **Zmienne środowiskowe:**
 ```env
@@ -1190,6 +1242,8 @@ export const supabaseClient = createClient<Database>(supabaseUrl, supabaseAnonKe
 
 ### 3.2. Flow rejestracji
 
+⚠️ **UWAGA:** Email confirmation jest **WYŁĄCZONE** zgodnie z PRD. Użytkownik może od razu korzystać z aplikacji po rejestracji.
+
 **Krok 1: Formularz rejestracji**
 - Użytkownik wypełnia `<RegisterForm />` (email, hasło, potwierdzenie hasła)
 - Walidacja kliencka (React Hook Form + Zod)
@@ -1200,27 +1254,16 @@ export const supabaseClient = createClient<Database>(supabaseUrl, supabaseAnonKe
 const { data, error } = await supabaseClient.auth.signUp({
   email: 'user@example.com',
   password: 'SecurePassword123',
-  options: {
-    emailRedirectTo: `${window.location.origin}/onboarding/consent`,
-  },
+  // Bez options.emailRedirectTo - email confirmation wyłączone
 });
 ```
 
-**Krok 3: Supabase tworzy użytkownika**
-- Nowy rekord w `auth.users` z `email_confirmed_at = NULL`
-- Wygenerowanie JWT tokenu (nieaktywny do momentu potwierdzenia emaila, jeśli email confirmation jest włączone)
+**Krok 3: Supabase tworzy użytkownika i sesję**
+- Nowy rekord w `auth.users` z `email_confirmed_at = NOW()` (email traktowany jako potwierdzony)
+- Automatyczne wygenerowanie JWT tokenu (access token + refresh token)
+- **Sesja jest aktywna od razu** - użytkownik może korzystać z aplikacji
 
-**Krok 4: Supabase wysyła email weryfikacyjny**
-- Email z linkiem potwierdzającym (magic link)
-- Link: `https://your-project.supabase.co/auth/v1/verify?token=...&type=signup&redirect_to=/onboarding/consent`
-
-**Krok 5: Użytkownik klika link w emailu**
-- Supabase weryfikuje token
-- Ustawienie `email_confirmed_at` w `auth.users`
-- Automatyczne utworzenie sesji (JWT access token + refresh token)
-- Redirect na `/onboarding/consent`
-
-**Krok 6: Trigger bazy danych (opcjonalny)**
+**Krok 4: Trigger bazy danych**
 - Po utworzeniu użytkownika w `auth.users`, trigger automatycznie tworzy profil w `profiles`:
   ```sql
   CREATE OR REPLACE FUNCTION handle_new_user()
@@ -1237,6 +1280,11 @@ const { data, error } = await supabaseClient.auth.signUp({
     FOR EACH ROW
     EXECUTE FUNCTION handle_new_user();
   ```
+
+**Krok 5: Automatyczny redirect**
+- Klient zapisuje sesję w localStorage (automatycznie przez Supabase)
+- Użytkownik jest przekierowany na `/onboarding/consent`
+- **Brak kroku weryfikacji emaila** - onboarding jest natychmiastowy
 
 ---
 
@@ -1847,6 +1895,90 @@ Edytuj `/src/middleware/index.ts` i dodaj nową ścieżkę do `PROTECTED_ROUTES`
 6. Testy jednostkowe i E2E
 7. Dokumentacja użytkownika i dewelopera
 8. Deployment i konfiguracja produkcyjna
+
+---
+
+## 10. RECONCILIACJA Z PRD - RAPORT
+
+**Data analizy:** 2025-11-05
+
+### 10.1. Sprzeczności wykryte i rozwiązane
+
+| # | Sprzeczność | Decyzja | Status |
+|---|-------------|---------|--------|
+| 1 | **Email Confirmation nie był wymieniony w PRD** | Wyłączono email confirmation w Supabase. Użytkownik korzysta z aplikacji natychmiast po rejestracji. | ✅ ROZWIĄZANE |
+| 2 | **Flow rejestracji różnił się od PRD US-001** | Uproszczono flow - usunięto kroki weryfikacji emaila. Sesja tworzona automatycznie. | ✅ ROZWIĄZANE |
+| 3 | **Komunikaty użytkownika sugerowały weryfikację emaila** | Zaktualizowano wszystkie komunikaty, usunięto wzmianki o emailu weryfikacyjnym. | ✅ ROZWIĄZANE |
+
+### 10.2. Weryfikacja zgodności User Stories
+
+| User Story | Pokrycie w auth-spec | Komentarz |
+|------------|---------------------|-----------|
+| US-001: Uwierzytelnianie | ✅ PEŁNE | Rejestracja i logowanie z Supabase Auth, automatyczna generacja UID |
+| US-002: Pierwsza zgoda | ⚠️ CZĘŚCIOWE | Auth-spec integruje się z consent system (sekcja 3.7). Szczegóły consent w osobnej specyfikacji. |
+| US-007: Przekroczenie limitu | ✅ PEŁNE | Trigger bazy (sekcja 4.1) inicjalizuje quota: 3 darmowe generacje, odnowienie co 30 dni |
+| US-003 - US-006, US-008 - US-010 | ➖ POZA ZAKRESEM | Te User Stories dotyczą funkcjonalności VTON, persona upload, walidacji obrazów - poza zakresem modułu autentykacji |
+
+### 10.3. Nadmiarowe założenia zidentyfikowane
+
+1. **Consent flow w sekcji 3.7**
+   - **Problem:** Auth-spec szczegółowo opisuje integrację z consent system, ale consent nie jest częścią modułu autentykacji
+   - **Rozwiązanie:** Zachowano minimalną integrację (redirect na `/onboarding/consent`, trigger tworzy profil z `consent_version = 'v0'`). Szczegóły consent przeniesione do osobnej specyfikacji.
+
+2. **Wielokrotne opisanie przekierowań**
+   - **Problem:** Scenariusze przekierowań powtarzane w sekcjach 1.5.3, 3.7, 1.7
+   - **Rozwiązanie:** Zachowano dla jasności, ale należy pamiętać o aktualizacji wszystkich miejsc przy zmianach
+
+### 10.4. Kluczowe decyzje architektoniczne
+
+| Decyzja | Uzasadnienie | Wpływ |
+|---------|--------------|-------|
+| **Email confirmation: WYŁĄCZONE** | PRD nie wymienia weryfikacji emaila jako wymagania. Priorytet: szybki onboarding. | Użytkownik może korzystać z aplikacji od razu po rejestracji. Ryzyko: spam accounts. |
+| **Hasło min. 8 znaków (rejestracja)** | Zwiększone bezpieczeństwo względem domyślnych 6 znaków Supabase. | LoginForm akceptuje >=6 znaków (dla kompatybilności wstecznej), RegisterForm wymusza >=8 |
+| **Trigger bazy dla profili** | Automatyczne tworzenie profilu z quota po rejestracji. | Upraszcza implementację, eliminuje potrzebę oddzielnego endpointu API |
+| **Middleware ochrony ścieżek** | Centralizacja logiki autentykacji w middleware Astro. | Spójne zachowanie dla wszystkich chronionych ścieżek |
+
+### 10.5. Nierozwiązane kwestie i ryzyka
+
+| Kwestia | Ryzyko | Rekomendacja |
+|---------|--------|--------------|
+| **Brak weryfikacji emaila** | Możliwość tworzenia kont ze sfałszowanymi adresami email | Rozważyć monitoring i rate limiting rejestracji z tego samego IP |
+| **Hasła 6 vs 8 znaków** | Użytkownicy mogą być zdezorientowani różnymi wymaganiami | Dokumentacja FAQ powinna wyjaśnić, że stare konta (6 znaków) są akceptowane |
+| **Consent system częściowo w auth-spec** | Może powodować zamieszanie co do odpowiedzialności modułów | Stworzyć osobną specyfikację techniczną dla consent system |
+| **Quota renewal logic** | Auth-spec inicjalizuje quota, ale nie opisuje logiki odnowienia | Należy stworzyć osobną specyfikację dla quota management (cron job) |
+
+### 10.6. Następne kroki
+
+1. ✅ Zaktualizowano auth-spec.md zgodnie z wynikami reconciliacji
+2. ⏳ Wymagane: Utworzenie osobnej specyfikacji technicznej dla **Consent System**
+3. ⏳ Wymagane: Utworzenie specyfikacji technicznej dla **Quota Management & Renewal**
+4. ⏳ Wymagane: Utworzenie specyfikacji technicznej dla **Persona Upload & Management**
+5. ⏳ Wymagane: Utworzenie specyfikacji technicznej dla **VTON Generation Flow**
+6. ⏳ Zalecane: Dokumentacja FAQ dla użytkowników (pytania o hasła, brak emaila weryfikacyjnego)
+7. ⏳ Zalecane: Rate limiting dla rejestracji (ochrona przed spam accounts)
+
+### 10.7. Testy wymagane po zmianach
+
+Po implementacji zgodnie z zaktualizowanym auth-spec należy przeprowadzić:
+
+**Testy funkcjonalne:**
+- [ ] Rejestracja bez email confirmation - użytkownik od razu ma sesję
+- [ ] Logowanie z kontami mającymi hasła 6-8 znaków
+- [ ] Redirect na `/onboarding/consent` po rejestracji
+- [ ] Trigger bazy tworzy profil z quota = 3
+- [ ] Middleware blokuje dostęp do chronionych ścieżek
+
+**Testy E2E (Playwright):**
+- [ ] Scenariusz 1: Pełny flow rejestracji → onboarding → consent
+- [ ] Scenariusz 2: Logowanie → redirect na ostatnią odwiedzaną stronę
+- [ ] Scenariusz 3: Reset hasła przez email
+- [ ] Scenariusz 4: Wygaśnięcie sesji → redirect na login
+
+**Testy bezpieczeństwa:**
+- [ ] Próba dostępu do chronionej ścieżki bez sesji
+- [ ] Próba rejestracji tego samego emaila dwukrotnie
+- [ ] Rate limiting dla failed login attempts
+- [ ] XSS i CSRF protection
 
 ---
 

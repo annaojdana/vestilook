@@ -1,15 +1,21 @@
 ---
 import "../styles/global.css";
+import { UserNavigation } from "@/components/layout/UserNavigation";
+import { Toaster } from "@/components/ui/sonner";
 
 interface Props {
   title?: string;
+  showNavigation?: boolean;
 }
 
-const { title = "10x Astro Starter" } = Astro.props;
+const { title = "Vestilook", showNavigation = true } = Astro.props;
+
+// Get user from middleware (Astro.locals.user is set by auth middleware)
+const user = Astro.locals.user;
 ---
 
 <!doctype html>
-<html lang="en">
+<html lang="pl">
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width" />
@@ -18,7 +24,50 @@ const { title = "10x Astro Starter" } = Astro.props;
     <title>{title}</title>
   </head>
   <body>
-    <slot />
+    {showNavigation && (
+      <header class="sticky top-0 z-50 w-full border-b bg-white/95 backdrop-blur supports-[backdrop-filter]:bg-white/60">
+        <div class="container flex h-16 items-center justify-between px-4">
+          <div class="flex items-center gap-6">
+            <a href="/" class="flex items-center space-x-2">
+              <span class="text-xl font-bold bg-gradient-to-r from-purple-600 to-pink-600 bg-clip-text text-transparent">
+                Vestilook
+              </span>
+            </a>
+            {user && (
+              <nav class="hidden md:flex items-center gap-6">
+                <a href="/dashboard" class="text-sm font-medium text-gray-700 hover:text-gray-900 transition-colors">
+                  Dashboard
+                </a>
+                <a href="/generations" class="text-sm font-medium text-gray-700 hover:text-gray-900 transition-colors">
+                  Generacje
+                </a>
+              </nav>
+            )}
+          </div>
+
+          <div class="flex items-center gap-4">
+            {user ? (
+              <UserNavigation client:load userEmail={user.email!} />
+            ) : (
+              <div class="flex items-center gap-2">
+                <a href="/auth/login" class="text-sm font-medium text-gray-700 hover:text-gray-900 transition-colors px-4 py-2">
+                  Zaloguj się
+                </a>
+                <a href="/auth/register" class="text-sm font-medium text-white bg-gradient-to-r from-purple-600 to-pink-600 hover:from-purple-700 hover:to-pink-700 transition-all px-4 py-2 rounded-md">
+                  Zarejestruj się
+                </a>
+              </div>
+            )}
+          </div>
+        </div>
+      </header>
+    )}
+
+    <main>
+      <slot />
+    </main>
+
+    <Toaster client:load />
   </body>
 </html>
 
@@ -28,5 +77,10 @@ const { title = "10x Astro Starter" } = Astro.props;
     margin: 0;
     width: 100%;
     height: 100%;
+  }
+
+  .container {
+    max-width: 1280px;
+    margin: 0 auto;
   }
 </style>

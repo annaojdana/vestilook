@@ -16,66 +16,54 @@ export const supabaseClient = createClient<Database>(supabaseUrl, supabaseAnonKe
   },
 });
 
-// Server-side Supabase client factory for Astro pages/middleware
-// Uses cookies for session management
+// Cookie options for server-side session management
+export const cookieOptions = {
+  path: '/',
+  secure: true,
+  httpOnly: true,
+  sameSite: 'lax' as const,
+};
+
+// Parse cookie header into array of {name, value} objects
+function parseCookieHeader(cookieHeader: string): { name: string; value: string }[] {
+  if (!cookieHeader) return [];
+
+  return cookieHeader.split(';').map((cookie) => {
+    const [name, ...rest] = cookie.trim().split('=');
+    return { name, value: rest.join('=') };
+  });
+}
+
+/**
+ * Server-side Supabase client factory for Astro pages/middleware
+ * IMPORTANT: Uses getAll/setAll pattern for cookie management as per security best practices
+ * NEVER use individual get/set/remove methods
+ */
 export function createSupabaseServerClient(context: {
   headers: Headers;
   cookies: AstroCookies;
 }) {
-  // Parse cookies from header
-  function parseCookieHeader(cookieHeader: string): Record<string, string> {
-    const cookies: Record<string, string> = {};
-    if (!cookieHeader) return cookies;
-
-    cookieHeader.split(';').forEach((cookie) => {
-      const [name, ...rest] = cookie.trim().split('=');
-      if (name) {
-        cookies[name] = rest.join('=');
-      }
-    });
-
-    return cookies;
-  }
-
-  const cookiesFromHeader = parseCookieHeader(context.headers.get('Cookie') ?? '');
-
   return createClient<Database>(supabaseUrl, supabaseAnonKey, {
     auth: {
       persistSession: false, // Don't use localStorage on server
       autoRefreshToken: false,
       detectSessionInUrl: false,
+      flowType: 'pkce',
     },
-    global: {
-      headers: {
-        // Forward cookies to Supabase
-        ...Object.keys(cookiesFromHeader).reduce(
-          (acc, key) => {
-            if (key.startsWith('sb-')) {
-              acc[key] = cookiesFromHeader[key];
-            }
-            return acc;
-          },
-          {} as Record<string, string>,
-        ),
-      },
-    },
-    // Custom cookie handling for server-side
     cookies: {
-      get: (name: string) => cookiesFromHeader[name] ?? null,
-      set: (name: string, value: string, options: any) => {
-        context.cookies.set(name, value, {
-          path: options.path ?? '/',
-          maxAge: options.maxAge,
-          httpOnly: options.httpOnly ?? true,
-          secure: options.secure ?? true,
-          sameSite: (options.sameSite as 'lax' | 'strict' | 'none') ?? 'lax',
-        });
+      // IMPORTANT: Use getAll pattern - returns all cookies at once
+      getAll() {
+        return parseCookieHeader(context.headers.get('Cookie') ?? '');
       },
-      remove: (name: string, options: any) => {
-        context.cookies.delete(name, {
-          path: options.path ?? '/',
+      // IMPORTANT: Use setAll pattern - sets multiple cookies at once
+      setAll(cookiesToSet) {
+        cookiesToSet.forEach(({ name, value, options }) => {
+          context.cookies.set(name, value, {
+            ...cookieOptions,
+            ...options,
+          });
         });
       },
     },
-  } as any);
+  });
 }

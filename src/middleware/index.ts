@@ -1,6 +1,11 @@
 import { defineMiddleware } from 'astro:middleware';
 import { createSupabaseServerClient } from '../db/supabase.client';
 
+/**
+ * Authentication Middleware
+ * Follows Supabase SSR best practices with proper session management
+ */
+
 // Public paths that don't require authentication
 const PUBLIC_PATHS = [
   '/auth/login',
@@ -8,6 +13,13 @@ const PUBLIC_PATHS = [
   '/auth/reset-password',
   '/auth/update-password',
   '/', // Landing page
+];
+
+// API endpoints that don't require authentication
+const PUBLIC_API_PATHS = [
+  '/api/auth/login',
+  '/api/auth/register',
+  '/api/auth/reset-password',
 ];
 
 // Protected paths that require authentication
@@ -25,7 +37,12 @@ const AUTH_PATHS = ['/auth/login', '/auth/register', '/auth/reset-password'];
 export const onRequest = defineMiddleware(async (context, next) => {
   const path = context.url.pathname;
 
-  // Create Supabase server client with cookies
+  // Skip authentication for public API paths
+  if (PUBLIC_API_PATHS.some((apiPath) => path.startsWith(apiPath))) {
+    return next();
+  }
+
+  // Create Supabase server client with proper cookie handling (getAll/setAll)
   const supabase = createSupabaseServerClient({
     headers: context.request.headers,
     cookies: context.cookies,
@@ -35,13 +52,14 @@ export const onRequest = defineMiddleware(async (context, next) => {
   context.locals.supabase = supabase;
 
   try {
-    // Get the current user session
+    // IMPORTANT: Always get user session first before any other operations
+    // This ensures proper JWT validation and session refresh
     const {
       data: { user },
       error,
     } = await supabase.auth.getUser();
 
-    // Add user to context
+    // Add user to context with proper structure
     if (user && !error) {
       context.locals.user = user;
     } else {
@@ -59,7 +77,7 @@ export const onRequest = defineMiddleware(async (context, next) => {
       return context.redirect(redirectUrl, 302);
     }
 
-    // Redirect authenticated users from auth pages to dashboard
+    // Redirect authenticated users from auth pages to onboarding/dashboard
     if (isAuthPath && user) {
       return context.redirect('/onboarding/consent', 302);
     }
@@ -71,7 +89,7 @@ export const onRequest = defineMiddleware(async (context, next) => {
 
     return next();
   } catch (err) {
-    console.error('Middleware error:', err);
+    console.error('Middleware authentication error:', err);
     // On error, allow public paths, redirect protected paths
     const isProtectedPath = PROTECTED_PATHS.some((route) => path.startsWith(route));
     if (isProtectedPath) {

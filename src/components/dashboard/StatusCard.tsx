@@ -9,13 +9,13 @@ interface StatusCardProps {
 
 const StatusCard: React.FC<StatusCardProps> = ({ title, status, message }) => {
   return (
-    <Card>
+    <Card className="bg-white shadow-md rounded-md">
       <CardHeader>
-        <CardTitle>{title}</CardTitle>
+        <CardTitle className="text-lg font-semibold">{title}</CardTitle>
       </CardHeader>
       <CardContent>
-        <p>Status: {status}</p>
-        <p>{message}</p>
+        <p className="text-gray-700">Status: {status}</p>
+        <p className="text-gray-600">{message}</p>
       </CardContent>
     </Card>
   );

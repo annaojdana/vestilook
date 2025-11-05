@@ -389,3 +389,11 @@ export interface StorageCleanupResultDto {
   profilesUpdated: number;
   executedAt: IsoTimestamp;
 }
+
+export interface GenerationHistoryFilters {
+  status: GenerationStatus[];
+  from?: string;
+  to?: string;
+  limit: number;
+  cursor?: string | null;
+}

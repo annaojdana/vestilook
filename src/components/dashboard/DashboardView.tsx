@@ -9,8 +9,8 @@ interface DashboardViewProps {
 
 const DashboardView: React.FC<DashboardViewProps> = ({ profile, quota }) => {
   return (
-    <div>
-      <h2>Dashboard View</h2>
+    <div className="container mx-auto py-8">
+      <h2 className="text-2xl font-bold mb-4">Dashboard View</h2>
       <StatusCardGrid />
       <pre>Profile: {JSON.stringify(profile, null, 2)}</pre>
       <pre>Quota: {JSON.stringify(quota, null, 2)}</pre>

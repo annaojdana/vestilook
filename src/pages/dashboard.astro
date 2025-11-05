@@ -1,0 +1,53 @@
+---
+import { createClient } from "@supabase/supabase-js";
+import { getProfile } from "../lib/profile-service";
+import BaseLayout from "../layouts/Layout.astro";
+import DashboardView from "../components/dashboard/DashboardView";
+import type { ProfileResponseDto } from "../types";
+
+const SUPABASE_URL = import.meta.env.SUPABASE_URL;
+const SUPABASE_ANON_KEY = import.meta.env.SUPABASE_KEY;
+
+const token = Astro.cookies.get("sb-auth-token")?.value;
+
+if (!token) {
+  return Astro.redirect("/login");
+}
+
+const supabase = createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
+  global: {
+    headers: {
+      Authorization: `Bearer ${token}`,
+    },
+  },
+});
+
+const {
+  data: { user },
+} = await supabase.auth.getUser();
+
+if (!user) {
+  return Astro.redirect("/login");
+}
+
+const profileLookupResult = await getProfile(supabase, user.id);
+
+if (!profileLookupResult) {
+  return Astro.redirect("/onboarding");
+}
+
+let profile: ProfileResponseDto;
+
+if (profileLookupResult.status === "found") {
+  profile = profileLookupResult.profile;
+} else {
+  return Astro.redirect("/onboarding");
+}
+
+---
+
+<BaseLayout title="Dashboard">
+  <main>
+    <DashboardView initialData={profile} />
+  </main>
+</BaseLayout>

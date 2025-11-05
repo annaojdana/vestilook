@@ -1,5 +1,5 @@
 ---
-import { Suspense } from "react";
+import { Suspense, createElement } from "react";
 import OnboardingLayout from "../../layouts/OnboardingLayout.astro";
 import OnboardingConsentPage from "../../components/onboarding/OnboardingConsentPage.tsx";
 
@@ -7,6 +7,11 @@ const canonical = Astro.site ? new URL(Astro.url.pathname, Astro.site).href : un
 const defaultPolicyUrl = "/legal/polityka-przetwarzania-wizerunku";
 const policyUrl = import.meta.env.PUBLIC_CONSENT_POLICY_URL ?? defaultPolicyUrl;
 const nextPath = "/onboarding/persona";
+const consentFallback = createElement(
+  "div",
+  { className: "flex items-center justify-center text-muted-foreground" },
+  "Ładowanie..."
+);
 ---
 
 <OnboardingLayout
@@ -18,7 +23,7 @@ const nextPath = "/onboarding/persona";
     class="flex flex-1 flex-col items-center justify-center bg-gradient-to-br from-accent/30 via-transparent to-primary/10 px-6 py-12"
   >
     <div class="relative z-10 flex w-full max-w-4xl flex-1 items-stretch justify-center">
-      <Suspense fallback={(<div class="flex items-center justify-center text-muted-foreground">Ładowanie...</div>)}>
+      <Suspense fallback={consentFallback}>
         <OnboardingConsentPage client:load policyUrl={policyUrl} nextPath={nextPath} />
       </Suspense>
     </div>

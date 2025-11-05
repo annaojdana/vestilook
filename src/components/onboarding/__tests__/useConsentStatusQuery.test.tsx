@@ -67,6 +67,10 @@ describe("useConsentStatusQuery", () => {
       },
     };
 
+    if (!server) {
+      throw new Error("MSW server is not initialized");
+    }
+
     server.use(
       http.get("/api/profile/consent", () => {
         return HttpResponse.json(mockResponse);
@@ -89,6 +93,10 @@ describe("useConsentStatusQuery", () => {
   });
 
   it("surfaces conflict errors when API returns 409", async () => {
+    if (!server) {
+      throw new Error("MSW server is not initialized");
+    }
+
     server.use(
       http.get("/api/profile/consent", () => {
         return new HttpResponse(null, { status: 409 });

@@ -1,6 +1,6 @@
 ---
 import type { AstroCookies } from "astro";
-import { Suspense } from "react";
+import { Suspense, createElement } from "react";
 
 import Layout from "../../layouts/Layout.astro";
 import GenerationForm from "../../components/generations/GenerationForm.tsx";
@@ -130,6 +130,11 @@ if (prefetch.status === 401 || prefetch.status === 403) {
   return Astro.redirect(buildLoginRedirect(Astro.url.pathname));
 }
 
+const generationFallback = createElement(
+  "div",
+  { className: "text-sm text-muted-foreground" },
+  "Ładowanie formularza..."
+);
 const personaMissing = !prefetch.profile?.persona;
 const defaultRetentionHours = 48;
 const consentPolicyUrl = import.meta.env.PUBLIC_CONSENT_POLICY_URL ?? "#";
@@ -172,7 +177,7 @@ const onboardingPersonaPath = "/onboarding/persona";
           </p>
         </div>
       ) : prefetch.profile ? (
-        <Suspense fallback={(<div class="text-sm text-muted-foreground">Ładowanie formularza...</div>)}>
+        <Suspense fallback={generationFallback}>
           <div class="rounded-2xl border border-muted/20 bg-background/80 p-6 shadow-xl shadow-primary/5 backdrop-blur dark:border-muted/30 dark:bg-background/70">
             <GenerationForm
               client:load

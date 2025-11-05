@@ -2,7 +2,7 @@ import type { Tables, Enums } from "./db/database.types";
 
 type ProfileRow = Tables<"profiles">;
 type VtonGenerationRow = Tables<"vton_generations">;
-type GenerationStatus = Enums<"generation_status">;
+export type GenerationStatus = Enums<"generation_status">;
 
 type IsoTimestamp = ProfileRow["created_at"];
 type Uuid = ProfileRow["user_id"];

@@ -1,0 +1,14 @@
+---
+import ResultGenerationView from "../../components/generations/ResultGenerationView";
+import Layout from "../../layouts/Layout.astro";
+
+export async function getStaticPaths() {
+  return [{ params: { id: "example" } }]; // Dodaj więcej statycznych ścieżek, jeśli to konieczne
+}
+
+const { id } = Astro.params;
+---
+
+<Layout title={`Wynik generacji ${id}`}>
+  <ResultGenerationView generationId={id} client:only="react" />
+</Layout>

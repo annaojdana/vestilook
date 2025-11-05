@@ -1,53 +1,41 @@
 ---
-import { createClient } from "@supabase/supabase-js";
-import { getProfile } from "../lib/profile-service";
-import BaseLayout from "../layouts/Layout.astro";
+import Layout from "../layouts/Layout.astro";
 import DashboardView from "../components/dashboard/DashboardView";
-import type { ProfileResponseDto } from "../types";
+import { checkAuth } from "../middleware";
+import type { ProfileResponseDto, QuotaSummaryResponseDto } from "../types";
 
-const SUPABASE_URL = import.meta.env.SUPABASE_URL;
-const SUPABASE_ANON_KEY = import.meta.env.SUPABASE_KEY;
+const authResult = await checkAuth(Astro.request);
 
-const token = Astro.cookies.get("sb-auth-token")?.value;
-
-if (!token) {
-  return Astro.redirect("/login");
+if ("redirect" in authResult) {
+  return authResult.redirect;
 }
 
-const supabase = createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
-  global: {
-    headers: {
-      Authorization: `Bearer ${token}`,
-    },
+const { session } = authResult;
+
+const profileResponse = await fetch("/api/profile", {
+  headers: {
+    Authorization: `Bearer ${session.session.access_token}`,
   },
 });
 
-const {
-  data: { user },
-} = await supabase.auth.getUser();
-
-if (!user) {
-  return Astro.redirect("/login");
+if (profileResponse.status === 204) {
+  return Astro.redirect("/onboarding/consent");
 }
 
-const profileLookupResult = await getProfile(supabase, user.id);
+const profile: ProfileResponseDto = await profileResponse.json();
 
-if (!profileLookupResult) {
-  return Astro.redirect("/onboarding");
-}
+const quotaResponse = await fetch("/api/profile/quota", {
+  headers: {
+    Authorization: `Bearer ${session.session.access_token}`,
+  },
+});
 
-let profile: ProfileResponseDto;
-
-if (profileLookupResult.status === "found") {
-  profile = profileLookupResult.profile;
-} else {
-  return Astro.redirect("/onboarding");
-}
+const quota: QuotaSummaryResponseDto = await quotaResponse.json();
 
 ---
 
-<BaseLayout title="Dashboard">
+<Layout title="Dashboard">
   <main>
-    <DashboardView initialData={profile} />
+    <DashboardView client:load profile={profile} quota={quota} />
   </main>
-</BaseLayout>
+</Layout>

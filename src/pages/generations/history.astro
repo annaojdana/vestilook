@@ -1,0 +1,20 @@
+---
+import Layout from "../../layouts/Layout.astro";
+import GenerationsHistoryView from "../../components/vton/history/GenerationsHistoryView";
+import { checkAuth } from "../../middleware";
+
+const authResult = await checkAuth(Astro.request);
+
+if ("redirect" in authResult) {
+  return authResult.redirect;
+}
+
+const { session } = authResult;
+
+---
+
+<Layout title="Historia Generacji">
+  <main>
+    <GenerationsHistoryView client:load session={session} />
+  </main>
+</Layout>

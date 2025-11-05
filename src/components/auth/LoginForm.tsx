@@ -21,9 +21,9 @@ interface LoginFormProps {
   errorMessage?: string;
 }
 
-export const LoginForm: FC<LoginFormProps> = ({ redirectTo = "/onboarding/consent", errorMessage }) => {
+export function LoginForm({ redirectTo = '/onboarding/consent', errorMessage }: LoginFormProps) {
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const [error, setError] = useState<string | null>(errorMessage ?? null);
+  const [error, setError] = useState<string | null>(errorMessage || null);
 
   const {
     register,
@@ -37,37 +37,34 @@ export const LoginForm: FC<LoginFormProps> = ({ redirectTo = "/onboarding/consen
     setIsSubmitting(true);
     setError(null);
 
-    // TODO: Implement Supabase Auth integration
-    // const { data, error } = await supabaseClient.auth.signInWithPassword({
-    //   email: values.email,
-    //   password: values.password,
-    // });
-    //
-    // if (error) {
-    //   setError('Nieprawidłowy email lub hasło');
-    //   setIsSubmitting(false);
-    //   return;
-    // }
-    //
-    // if (data?.session) {
-    //   toast.success('Zalogowano pomyślnie');
-    //   window.location.href = redirectTo;
-    // }
+    try {
+      const { data, error: authError } = await supabaseClient.auth.signInWithPassword({
+        email: values.email,
+        password: values.password,
+      });
 
-    console.log("Login form submitted:", values, "Redirect to:", redirectTo);
+      if (authError) {
+        setError(mapSupabaseAuthError(authError));
+        setIsSubmitting(false);
+        return;
+      }
 
-    // Temporary: simulate success after 1 second
-    setTimeout(() => {
+      if (data?.session) {
+        toast.success('Zalogowano pomyślnie');
+        window.location.href = redirectTo;
+      }
+    } catch (err) {
+      console.error('Login error:', err);
+      setError('Wystąpił problem z połączeniem. Spróbuj ponownie.');
       setIsSubmitting(false);
-      alert("Login UI ready - Backend integration pending");
-    }, 1000);
+    }
   };
 
   return (
-    <Card className="w-full max-w-md shadow-xl">
+    <Card className="w-full max-w-md">
       <CardHeader>
-        <CardTitle className="text-2xl">Zaloguj się do Vestilook</CardTitle>
-        <CardDescription>Wprowadź swoje dane, aby uzyskać dostęp do konta</CardDescription>
+        <CardTitle>Zaloguj się do Vestilook</CardTitle>
+        <CardDescription>Wpisz swoje dane, aby kontynuować</CardDescription>
       </CardHeader>
       <CardContent>
         <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
@@ -83,9 +80,9 @@ export const LoginForm: FC<LoginFormProps> = ({ redirectTo = "/onboarding/consen
               id="email"
               type="email"
               autoComplete="email"
-              placeholder="twoj@email.com"
-              aria-invalid={!!errors.email}
-              {...register("email")}
+              placeholder="twoj@email.pl"
+              {...register('email')}
+              disabled={isSubmitting}
             />
             {errors.email && (
               <p className="text-sm text-destructive">{errors.email.message}</p>
@@ -99,39 +96,34 @@ export const LoginForm: FC<LoginFormProps> = ({ redirectTo = "/onboarding/consen
               type="password"
               autoComplete="current-password"
               placeholder="••••••••"
-              aria-invalid={!!errors.password}
-              {...register("password")}
+              {...register('password')}
+              disabled={isSubmitting}
             />
             {errors.password && (
               <p className="text-sm text-destructive">{errors.password.message}</p>
             )}
           </div>
 
-          <div className="flex items-center justify-end">
+          <Button type="submit" className="w-full" disabled={isSubmitting}>
+            {isSubmitting ? 'Logowanie...' : 'Zaloguj się'}
+          </Button>
+
+          <div className="space-y-2 text-center text-sm">
             <a
               href="/auth/reset-password"
-              className="text-sm text-primary hover:underline"
+              className="text-primary hover:underline"
             >
               Zapomniałeś hasła?
             </a>
+            <div>
+              <span className="text-muted-foreground">Nie masz jeszcze konta? </span>
+              <a href="/auth/register" className="text-primary hover:underline">
+                Zarejestruj się
+              </a>
+            </div>
           </div>
-
-          <Button
-            type="submit"
-            className="w-full"
-            disabled={isSubmitting}
-          >
-            {isSubmitting ? "Logowanie..." : "Zaloguj się"}
-          </Button>
-
-          <p className="text-center text-sm text-muted-foreground">
-            Nie masz jeszcze konta?{" "}
-            <a href="/auth/register" className="text-primary hover:underline">
-              Zarejestruj się
-            </a>
-          </p>
         </form>
       </CardContent>
     </Card>
   );
-};
+}

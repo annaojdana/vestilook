@@ -1,21 +1,18 @@
-import { type FC, useState } from "react";
-import { useForm } from "react-hook-form";
-import { zodResolver } from "@hookform/resolvers/zod";
-import { z } from "zod";
+import { useState } from 'react';
+import { useForm } from 'react-hook-form';
+import { zodResolver } from '@hookform/resolvers/zod';
+import { supabaseClient } from '@/db/supabase.client';
+import {
+  resetPasswordRequestSchema,
+  type ResetPasswordRequestFormValues,
+} from '@/lib/validation';
+import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
+import { Card, CardHeader, CardTitle, CardDescription, CardContent } from '@/components/ui/card';
+import { Alert, AlertDescription } from '@/components/ui/alert';
 
-import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { Alert, AlertDescription } from "@/components/ui/alert";
-
-const resetPasswordRequestSchema = z.object({
-  email: z.string().email("Nieprawidłowy format adresu email"),
-});
-
-type ResetPasswordRequestFormValues = z.infer<typeof resetPasswordRequestSchema>;
-
-export const ResetPasswordRequestForm: FC = () => {
+export function ResetPasswordRequestForm() {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [successMessage, setSuccessMessage] = useState<string | null>(null);
@@ -24,7 +21,6 @@ export const ResetPasswordRequestForm: FC = () => {
     register,
     handleSubmit,
     formState: { errors },
-    getValues,
   } = useForm<ResetPasswordRequestFormValues>({
     resolver: zodResolver(resetPasswordRequestSchema),
   });
@@ -34,75 +30,52 @@ export const ResetPasswordRequestForm: FC = () => {
     setError(null);
     setSuccessMessage(null);
 
-    // TODO: Implement Supabase Auth integration
-    // const { error } = await supabaseClient.auth.resetPasswordForEmail(values.email, {
-    //   redirectTo: `${window.location.origin}/auth/update-password`,
-    // });
-    //
-    // if (error) {
-    //   setError('Wystąpił problem. Spróbuj ponownie.');
-    //   setIsSubmitting(false);
-    //   return;
-    // }
-    //
-    // setSuccessMessage(
-    //   `Link do resetowania hasła został wysłany na adres ${values.email}. Sprawdź swoją skrzynkę pocztową.`
-    // );
-    // setIsSubmitting(false);
+    try {
+      const { error: authError } = await supabaseClient.auth.resetPasswordForEmail(values.email, {
+        redirectTo: `${window.location.origin}/auth/update-password`,
+      });
 
-    console.log("Reset password request submitted:", values);
+      if (authError) {
+        setError('Wystąpił problem. Spróbuj ponownie.');
+        setIsSubmitting(false);
+        return;
+      }
 
-    // Temporary: simulate success after 1 second
-    setTimeout(() => {
-      setIsSubmitting(false);
       setSuccessMessage(
-        `Link do resetowania hasła został wysłany na adres ${values.email}. Sprawdź swoją skrzynkę pocztową.`
+        `Link do resetowania hasła został wysłany na adres ${values.email}. Sprawdź swoją skrzynkę pocztową.`,
       );
-    }, 1000);
+      setIsSubmitting(false);
+    } catch (err) {
+      console.error('Reset password error:', err);
+      setError('Wystąpił problem. Spróbuj ponownie.');
+      setIsSubmitting(false);
+    }
   };
 
   if (successMessage) {
     return (
-      <Card className="w-full max-w-md shadow-xl">
+      <Card className="w-full max-w-md">
         <CardHeader>
-          <CardTitle className="text-2xl">Email wysłany</CardTitle>
-          <CardDescription>Sprawdź swoją skrzynkę pocztową</CardDescription>
+          <CardTitle>Sprawdź swoją skrzynkę pocztową</CardTitle>
         </CardHeader>
         <CardContent className="space-y-4">
-          <Alert variant="success">
+          <Alert>
             <AlertDescription>{successMessage}</AlertDescription>
           </Alert>
-
-          <div className="space-y-2 text-sm text-muted-foreground">
-            <p>Kliknij w link w emailu, aby ustawić nowe hasło.</p>
-            <p>
-              Jeśli nie otrzymasz emaila w ciągu kilku minut, sprawdź folder spam lub{" "}
-              <button
-                type="button"
-                onClick={() => {
-                  setSuccessMessage(null);
-                  setError(null);
-                }}
-                className="text-primary hover:underline"
-              >
-                spróbuj ponownie
-              </button>
-              .
-            </p>
+          <div className="text-center">
+            <a href="/auth/login" className="text-primary hover:underline text-sm">
+              Powrót do logowania
+            </a>
           </div>
-
-          <Button asChild variant="outline" className="w-full">
-            <a href="/auth/login">Powrót do logowania</a>
-          </Button>
         </CardContent>
       </Card>
     );
   }
 
   return (
-    <Card className="w-full max-w-md shadow-xl">
+    <Card className="w-full max-w-md">
       <CardHeader>
-        <CardTitle className="text-2xl">Resetowanie hasła</CardTitle>
+        <CardTitle>Resetowanie hasła</CardTitle>
         <CardDescription>
           Podaj adres email powiązany z Twoim kontem. Wyślemy Ci link do resetowania hasła.
         </CardDescription>
@@ -121,30 +94,26 @@ export const ResetPasswordRequestForm: FC = () => {
               id="email"
               type="email"
               autoComplete="email"
-              placeholder="twoj@email.com"
-              aria-invalid={!!errors.email}
-              {...register("email")}
+              placeholder="twoj@email.pl"
+              {...register('email')}
+              disabled={isSubmitting}
             />
             {errors.email && (
               <p className="text-sm text-destructive">{errors.email.message}</p>
             )}
           </div>
 
-          <Button
-            type="submit"
-            className="w-full"
-            disabled={isSubmitting}
-          >
-            {isSubmitting ? "Wysyłanie..." : "Wyślij link"}
+          <Button type="submit" className="w-full" disabled={isSubmitting}>
+            {isSubmitting ? 'Wysyłanie...' : 'Wyślij link'}
           </Button>
 
-          <p className="text-center text-sm text-muted-foreground">
+          <div className="text-center text-sm">
             <a href="/auth/login" className="text-primary hover:underline">
               Powrót do logowania
             </a>
-          </p>
+          </div>
         </form>
       </CardContent>
     </Card>
   );
-};
+}

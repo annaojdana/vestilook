@@ -2,9 +2,7 @@ import { useState } from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { toast } from 'sonner';
-import { supabaseClient } from '@/db/supabase.client';
 import { registerSchema, type RegisterFormValues } from '@/lib/validation';
-import { mapSupabaseAuthError } from '@/lib/auth-errors';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -54,28 +52,44 @@ export function RegisterForm({ redirectTo = '/onboarding/consent' }: RegisterFor
     setError(null);
 
     try {
-      const { data, error: authError } = await supabaseClient.auth.signUp({
-        email: values.email,
-        password: values.password,
+      // Call server-side registration API endpoint
+      const response = await fetch('/api/auth/register', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          email: values.email,
+          password: values.password,
+        }),
       });
 
-      if (authError) {
-        if (authError.message.toLowerCase().includes('already registered')) {
-          setError('Ten adres email jest już zarejestrowany');
-        } else {
-          setError(mapSupabaseAuthError(authError));
-        }
+      const data = await response.json();
+
+      if (!response.ok) {
+        setError(data.error || 'Wystąpił błąd podczas rejestracji');
         setIsSubmitting(false);
         return;
       }
 
-      if (data?.session) {
+      // Check if email confirmation is required
+      if (data.needsEmailConfirmation) {
+        toast.success(
+          'Konto utworzone! Sprawdź swoją skrzynkę email, aby potwierdzić adres.',
+          { duration: 8000 }
+        );
+        // Redirect to login page with info message after short delay
+        setTimeout(() => {
+          window.location.href = '/auth/login?message=check-email';
+        }, 2000);
+      } else {
+        // If no confirmation needed (rare case), redirect immediately
         toast.success('Konto utworzone pomyślnie! Witamy w Vestilook.');
         window.location.href = redirectTo;
       }
     } catch (err) {
       console.error('Registration error:', err);
-      setError('Wystąpił problem z rejestracją. Spróbuj ponownie.');
+      setError('Wystąpił problem z połączeniem. Spróbuj ponownie.');
       setIsSubmitting(false);
     }
   };
@@ -145,6 +159,15 @@ export function RegisterForm({ redirectTo = '/onboarding/consent' }: RegisterFor
             {errors.confirmPassword && (
               <p className="text-sm text-destructive">{errors.confirmPassword.message}</p>
             )}
+          </div>
+
+          <div className="rounded-md bg-muted/50 p-3 text-sm text-muted-foreground">
+            <p className="flex items-start gap-2">
+              <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" className="h-5 w-5 flex-shrink-0">
+                <path strokeLinecap="round" strokeLinejoin="round" d="M21.75 6.75v10.5a2.25 2.25 0 01-2.25 2.25h-15a2.25 2.25 0 01-2.25-2.25V6.75m19.5 0A2.25 2.25 0 0019.5 4.5h-15a2.25 2.25 0 00-2.25 2.25m19.5 0v.243a2.25 2.25 0 01-1.07 1.916l-7.5 4.615a2.25 2.25 0 01-2.36 0L3.32 8.91a2.25 2.25 0 01-1.07-1.916V6.75" />
+              </svg>
+              <span>Po rejestracji otrzymasz wiadomość email z linkiem aktywacyjnym. Sprawdź swoją skrzynkę pocztową.</span>
+            </p>
           </div>
 
           <Button type="submit" className="w-full" disabled={isSubmitting}>

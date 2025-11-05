@@ -19,11 +19,17 @@ type LoginFormValues = z.infer<typeof loginSchema>;
 interface LoginFormProps {
   redirectTo?: string;
   errorMessage?: string;
+  infoMessage?: string;
 }
 
-export function LoginForm({ redirectTo = '/onboarding/consent', errorMessage }: LoginFormProps) {
+export function LoginForm({ redirectTo = '/onboarding/consent', errorMessage, infoMessage }: LoginFormProps) {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(errorMessage || null);
+  const [info, setInfo] = useState<string | null>(
+    infoMessage === 'check-email'
+      ? 'Sprawdź swoją skrzynkę email i kliknij w link aktywacyjny, aby potwierdzić konto.'
+      : null
+  );
 
   const {
     register,
@@ -71,6 +77,12 @@ export function LoginForm({ redirectTo = '/onboarding/consent', errorMessage }: 
           {error && (
             <Alert variant="destructive">
               <AlertDescription>{error}</AlertDescription>
+            </Alert>
+          )}
+
+          {info && (
+            <Alert>
+              <AlertDescription>{info}</AlertDescription>
             </Alert>
           )}
 

@@ -12,6 +12,7 @@ const PUBLIC_PATHS = [
   '/auth/register',
   '/auth/reset-password',
   '/auth/update-password',
+  '/auth/callback', // Email confirmation callback
   '/', // Landing page
 ];
 

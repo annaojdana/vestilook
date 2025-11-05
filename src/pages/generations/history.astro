@@ -1,15 +1,27 @@
 ---
 import Layout from "../../layouts/Layout.astro";
 import GenerationsHistoryView from "../../components/vton/history/GenerationsHistoryView";
-import { checkAuth } from "../../middleware";
 
-const authResult = await checkAuth(Astro.request);
+/**
+ * Generations History Page - Protected Route
+ * Authentication is handled by middleware (src/middleware/index.ts)
+ * User must be authenticated to access this page
+ */
 
-if ("redirect" in authResult) {
-  return authResult.redirect;
+// Get user from middleware - if null, middleware would have already redirected
+const { user, supabase } = Astro.locals;
+
+// Additional safeguard (middleware should prevent this)
+if (!user) {
+  return Astro.redirect("/auth/login");
 }
 
-const { session } = authResult;
+// Get session for API calls
+const { data: { session } } = await supabase.auth.getSession();
+
+if (!session) {
+  return Astro.redirect("/auth/login");
+}
 
 ---
 

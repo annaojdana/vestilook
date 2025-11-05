@@ -1,32 +1,47 @@
 ---
 import Layout from "../layouts/Layout.astro";
 import DashboardView from "../components/dashboard/DashboardView";
-import { checkAuth } from "../middleware";
 import type { ProfileResponseDto, QuotaSummaryResponseDto } from "../types";
 
-const authResult = await checkAuth(Astro.request);
+/**
+ * Dashboard Page - Protected Route
+ * Authentication is handled by middleware (src/middleware/index.ts)
+ * User must be authenticated to access this page
+ */
 
-if ("redirect" in authResult) {
-  return authResult.redirect;
+// Get user from middleware - if null, middleware would have already redirected
+const { user, supabase } = Astro.locals;
+
+// Additional safeguard (middleware should prevent this)
+if (!user) {
+  return Astro.redirect("/auth/login");
 }
 
-const { session } = authResult;
+// Get session for API calls
+const { data: { session } } = await supabase.auth.getSession();
 
+if (!session) {
+  return Astro.redirect("/auth/login");
+}
+
+// Fetch user profile
 const profileResponse = await fetch("/api/profile", {
   headers: {
-    Authorization: `Bearer ${session.session.access_token}`,
+    Authorization: `Bearer ${session.access_token}`,
   },
 });
 
+// Redirect to onboarding if profile not completed
 if (profileResponse.status === 204) {
   return Astro.redirect("/onboarding/consent");
 }
 
 const profile: ProfileResponseDto = await profileResponse.json();
 
+// Fetch quota information
 const quotaResponse = await fetch("/api/profile/quota", {
   headers: {
-    Authorization: `Bearer ${session.session.access_token}`,
+    Authorization: `Bearer ${session.access_token}`,
   },
 });
 

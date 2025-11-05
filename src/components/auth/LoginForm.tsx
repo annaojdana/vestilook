@@ -1,15 +1,20 @@
-import { useState } from 'react';
-import { useForm } from 'react-hook-form';
-import { zodResolver } from '@hookform/resolvers/zod';
-import { toast } from 'sonner';
-import { supabaseClient } from '@/db/supabase.client';
-import { loginSchema, type LoginFormValues } from '@/lib/validation';
-import { mapSupabaseAuthError } from '@/lib/auth-errors';
-import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
-import { Card, CardHeader, CardTitle, CardDescription, CardContent } from '@/components/ui/card';
-import { Alert, AlertDescription } from '@/components/ui/alert';
+import { type FC, useState } from "react";
+import { useForm } from "react-hook-form";
+import { zodResolver } from "@hookform/resolvers/zod";
+import { z } from "zod";
+
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { Alert, AlertDescription } from "@/components/ui/alert";
+
+const loginSchema = z.object({
+  email: z.string().email("Nieprawidłowy format adresu email"),
+  password: z.string().min(6, "Hasło musi mieć co najmniej 6 znaków"),
+});
+
+type LoginFormValues = z.infer<typeof loginSchema>;
 
 interface LoginFormProps {
   redirectTo?: string;

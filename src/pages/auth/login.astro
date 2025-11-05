@@ -1,0 +1,18 @@
+---
+import AuthLayout from "../../layouts/AuthLayout.astro";
+import { LoginForm } from "../../components/auth/LoginForm";
+
+const canonical = Astro.site ? new URL(Astro.url.pathname, Astro.site).href : undefined;
+const redirectTo = Astro.url.searchParams.get('redirect') ?? '/onboarding/consent';
+const errorMessage = Astro.url.searchParams.get('error') ?? undefined;
+---
+
+<AuthLayout
+  title="Vestilook — Logowanie"
+  description="Zaloguj się do swojego konta Vestilook."
+  canonical={canonical}
+>
+  <div class="flex min-h-screen items-center justify-center bg-gradient-to-br from-accent/30 via-transparent to-primary/10 px-6 py-12">
+    <LoginForm client:load redirectTo={redirectTo} errorMessage={errorMessage} />
+  </div>
+</AuthLayout>

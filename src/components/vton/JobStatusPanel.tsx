@@ -194,7 +194,7 @@ export function JobStatusPanel(props: JobStatusPanelProps): JSX.Element {
               ) : null}
 
               {state.data?.failureContext ? (
-                <FailureHelpCTA context={state.data.failureContext} />
+                <FailureHelpCTA context={state.data.failureContext} onAction={handleFailureAction} />
               ) : null}
 
               {state.metadata ? (

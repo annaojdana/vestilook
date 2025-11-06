@@ -120,3 +120,11 @@ alwaysApply: false
 - Weryfikacje interakcji UI dla `QuotaIndicator` i `ProgressTimeline` (teksty, aria, stany ostrzegawcze).
 - Testy powiadomień (toast) dla błędnego wylogowania (`LogoutButton`).
 - Automatyczne audyty a11y (axe/`vitest-axe`) dla `GenerationForm` oraz sekcji zgody onboardingowej – reguły `color-contrast` i `heading-order` ignorowane tymczasowo, brak innych naruszeń.
+- Nowe testy interakcji dla powłoki statusu generacji: `JobStatusPanel`, `JobStatusFooter` oraz `FailureHelpCTA` (nawigacja do wyniku, retry, kopiowanie metadanych, domknięcie panelu).
+- Uporządkowano makiety UI dialogów/scroll-area w testach, aby utrzymać aria-live i zapobiec duplikacji selektorów.
+- Zweryfikowano integrację `FailureHelpCTA` z panelem statusu (retry → Vertex retry, reupload → zamknięcie panelu) oraz aria-live komunikaty `useStatusAnnouncements`.
+
+#### Sprint 3 – następne cele
+- Dodać testy historii (`HistoryList`, `HistoryRow`, `ConfirmDeleteDialog`, skeletony) z mockami Supabase/Vertex.
+- Zabezpieczyć scenariusze skrajne `JobStatusPanel`: statusy końcowe, brak metadanych, komunikaty `useStatusAnnouncements`.
+- Rozszerzyć pokrycie CTA pomocy (akcja `contact-support`, fallback bez `supportUrl`).

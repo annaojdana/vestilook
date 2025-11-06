@@ -22,7 +22,7 @@ Vestilook delivers photorealistic virtual try-on previews by combining a user’
 - **Frontend:** Astro 5, React 19, TypeScript 5, Tailwind CSS 4, shadcn/ui, class-variance-authority, clsx, lucide-react, tw-animate-css.
 - **Backend, Auth & Storage:** Supabase (PostgreSQL, Auth, Storage life-cycle policies).
 - **AI Integration:** Google Cloud Platform with Vertex AI Virtual Try-On API.
-- **Tooling & Quality:** ESLint (with Astro/React plugins), Prettier (Astro plugin), TypeScript tooling, Husky + lint-staged.
+- **Tooling & Quality:** ESLint (with Astro/React plugins), Prettier (Astro plugin), TypeScript tooling, Husky + lint-staged, Vitest + React Testing Library + MSW do testów jednostkowych i integracyjnych, Playwright do testów end-to-end.
 - **CI/CD & Hosting:** GitHub Actions pipelines and DigitalOcean deployment via Docker images.
 - **Runtime:** Node.js 22.14.0 (see `.nvmrc`).
 

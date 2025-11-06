@@ -17,3 +17,7 @@ AI - Komunikacja przez usługę Google API
 CI/CD i Hosting:
 - Github Actions do tworzenia pipeline’ów CI/CD
 - DigitalOcean do hostowania aplikacji za pośrednictwem obrazu docker
+
+Testy:
+- Vitest z React Testing Library i MSW do testów jednostkowych oraz integracyjnych logiki formularzy i usług domenowych
+- Playwright (w trybie headless z trace viewerem) do testów end-to-end kluczowych przepływów użytkownika

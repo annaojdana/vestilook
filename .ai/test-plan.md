@@ -81,3 +81,42 @@ alwaysApply: false
 - Codzienny triage defektów, SLA: krytyczne ≤24 h, wysokie ≤48 h.
 - Po naprawie: retest + dodanie testu regresyjnego do pakietu automatycznego.
 - Raport końcowy releasu: pokrycie, status defektów, zidentyfikowane ryzyka i rekomendacje.
+
+### 11. Strategia zwiększania pokrycia (Q4 2025)
+
+**Priorytet bardzo wysoki – testujemy automatycznie**
+- Reactowe formularze i hooki sterujące stanem (generations/onboarding) – błędy tutaj blokują generację VTON, wymagamy scenariuszy szczęśliwych i błędnych.
+- Warstwa API `src/pages/api/**` – pokrycie pozytywne/negatywne (limit quota, brak zgody, błędy storage/Vertex), wykorzystać MSW + mock Supabase.
+- Serwisy `src/lib/**` (generation.service, profile-service, multipart, vertex.client) – logika biznesowa oraz obsługa wyjątków.
+- Middleware/autoryzacja – testy integracyjne dla redirectów oraz wymogu sesji Supabase.
+- Krytyczne widoki (Dashboard, Generations history) – przynajmniej smoke render + zachowanie CTA przy różnych danych z API.
+
+**Priorytet średni – pokrywamy tam, gdzie szybko uzyskamy wartość**
+- Komponenty UI reagujące na stany (alerty, badge, timeline) – snapshoty/interaction tests, by uniknąć regresji w komunikatach.
+- Integracja z loggerem i telemetry (sprawdzamy, że logi nie zawierają PII i mają requestId).
+- Edge cases w uploadach (duże pliki, anulowanie, czyszczenie URL.createObjectURL).
+
+**Niska wartość – nie planujemy bezpośrednich testów**
+- Pliki `.astro` z czystym markupem/layoutem – weryfikujemy manualnie, e2e wystarczy.
+- Generowane lub stricte typowe definicje (`src/types.ts`, DTO) – pokrycie zapewni TypeScript, a błędy łapiemy przez testy wyższych warstw.
+- Statyczne komponenty UI pochodzące z shadcn/ui (np. `src/components/ui/**`) – regresje odchwyci biblioteka; testujemy tylko nasze rozszerzenia.
+- Style/Tailwind konfiguracja – nie testujemy klas CSS, skupiamy się na zachowaniu komponentów.
+- Zewnętrzne SDK (Supabase, lucide-react) – zakładamy poprawność vendorów, stubujemy interfejs na potrzeby naszych testów.
+
+**Plan wdrożenia**
+1. **Sprint 1** – domknięcie brakujących unit testów dla hooków generations/onboarding i usług `profile-service`, `utils`.
+2. **Sprint 2** – rozszerzenie integracyjnych scenariuszy MSW o problemy Vertex (timeout/500) oraz retencję >72 h.
+3. **Sprint 3** – smoke render testy kluczowych widoków (React Testing Library), test dostępności dla formularzy.
+4. **Sprint 4** – Playwright e2e: onboarding bez zgody, upload błędnego pliku, historia generacji z filtrami.
+5. Po każdym sprincie aktualizujemy raport pokrycia w CI oraz uzupełniamy sekcję “Niska wartość” jeśli pojawią się nowe, mało krytyczne moduły.
+
+**Metryki sukcesu**
+- Pokrycie linii krytycznych modułów (lib/api/hooks) ≥80%.
+- Brak nowych luk w regresji – wszystkie incydenty produkcyjne muszą skutkować testem.
+- Raport `coverage/index.html` dołączany do artefaktów release; alarm w CI jeśli pokrycie spada >5% względem poprzedniego sprintu.
+
+### Sprint 3 (bieżący) – postępy
+- Dodano smoke testy renderowania dla `DashboardView`, `GenerationsHistoryView`, `ResultGenerationView`.
+- Weryfikacje interakcji UI dla `QuotaIndicator` i `ProgressTimeline` (teksty, aria, stany ostrzegawcze).
+- Testy powiadomień (toast) dla błędnego wylogowania (`LogoutButton`).
+- Automatyczne audyty a11y (axe/`vitest-axe`) dla `GenerationForm` oraz sekcji zgody onboardingowej – reguły `color-contrast` i `heading-order` ignorowane tymczasowo, brak innych naruszeń.

@@ -4,7 +4,12 @@ import { describe, expect, it, vi } from 'vitest';
 
 import type { Database } from '../../db/database.types.ts';
 import type { VtonEnvironmentConfig } from '../../types.ts';
-import { createGeneration, ensureQuota, validateGarment } from './generation.service.ts';
+import {
+  createGeneration,
+  ensureQuota,
+  validateGarment,
+  GenerationServiceError,
+} from './generation.service.ts';
 
 function createPngBlob(): Blob {
   const base64 = 'iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR4nGMAAQAABQABDQottAAAAABJRU5ErkJggg==';
@@ -24,6 +29,101 @@ const defaultEnv: VtonEnvironmentConfig = {
   minGarmentHeight: 1,
   allowedGarmentMimeTypes: ['image/png'],
 };
+
+type SupabaseMock = Parameters<typeof createGeneration>[1]['supabase'];
+
+function buildSupabaseWithProfile(profileRow: Database['public']['Tables']['profiles']['Row']) {
+  const garmentUpload = vi.fn(async () => ({ data: null, error: null }));
+  const personaCopy = vi.fn(async () => ({ data: null, error: null }));
+  const profileUpdateCalls: unknown[] = [];
+  const generationInsertPayloads: unknown[] = [];
+  const generationUpdateCalls: unknown[] = [];
+
+  const supabase = {
+    storage: {
+      from: vi.fn((bucket: string) => {
+        if (bucket === defaultEnv.garmentBucket) {
+          return { upload: garmentUpload };
+        }
+
+        if (bucket === defaultEnv.personaBucket) {
+          return { copy: personaCopy };
+        }
+
+        throw new Error(`Unexpected bucket ${bucket}`);
+      }),
+    },
+    from: vi.fn((table: string) => {
+      if (table === 'profiles') {
+        return {
+          select: () => ({
+            eq: () => ({
+              maybeSingle: async () => ({
+                data: profileRow,
+                error: null,
+                status: 200,
+              }),
+            }),
+          }),
+          update: (payload: unknown) => ({
+            eq: () => {
+              profileUpdateCalls.push(payload);
+              return Promise.resolve({ data: null, error: null });
+            },
+          }),
+        };
+      }
+
+      if (table === 'vton_generations') {
+        return {
+          insert: (payload: unknown) => {
+            generationInsertPayloads.push(payload);
+            return {
+              select: () => ({
+                single: async () => ({
+                  data: {
+                    id: 'gen-999',
+                    user_id: profileRow.user_id,
+                    status: 'queued' as const,
+                    vertex_job_id: null,
+                    persona_path_snapshot: 'users/user-1/generations/gen-999/persona.png',
+                    cloth_path_snapshot: 'users/user-1/garments/gen-999/Garment_File.png',
+                    created_at: new Date().toISOString(),
+                    expires_at: new Date(Date.now() + 48 * 3600 * 1000).toISOString(),
+                    completed_at: null,
+                    error_reason: null,
+                    rated_at: null,
+                    result_path: null,
+                    started_at: null,
+                    user_rating: null,
+                  },
+                  error: null,
+                }),
+              }),
+            };
+          },
+          update: (changes: unknown) => ({
+            eq: () => {
+              generationUpdateCalls.push(changes);
+              return Promise.resolve({ data: null, error: null });
+            },
+          }),
+        };
+      }
+
+      throw new Error(`Unexpected table ${table}`);
+    }),
+  } as unknown as SupabaseMock;
+
+  return {
+    supabase,
+    garmentUpload,
+    personaCopy,
+    profileUpdateCalls,
+    generationInsertPayloads,
+    generationUpdateCalls,
+  };
+}
 
 describe('validateGarment', () => {
   it('rejects unsupported mime types', async () => {
@@ -220,5 +320,321 @@ describe('createGeneration', () => {
 
     expect(generationInsertPayloads).toHaveLength(1);
     expect(generationUpdateCalls).toHaveLength(1);
+  });
+
+  it('throws when consent version mismatches profile state', async () => {
+    const profileRow: Database['public']['Tables']['profiles']['Row'] = {
+      user_id: 'user-1',
+      consent_version: 'v2',
+      consent_accepted_at: new Date().toISOString(),
+      created_at: new Date().toISOString(),
+      updated_at: new Date().toISOString(),
+      persona_path: 'users/user-1/persona.png',
+      cloth_path: null,
+      cloth_expires_at: null,
+      free_generation_quota: 5,
+      free_generation_used: 1,
+      quota_renewal_at: null,
+    };
+
+    const { supabase } = buildSupabaseWithProfile(profileRow);
+    const vertexClient = { enqueueJob: vi.fn() };
+
+    await createGeneration(
+      {
+        garment: createPngBlob(),
+        garmentFilename: 'garment.png',
+        consentVersion: 'v1',
+        retainForHours: 48,
+      },
+      {
+        userId: profileRow.user_id,
+        supabase,
+        env: defaultEnv,
+        vertexClient,
+      },
+    ).then(
+      () => {
+        throw new Error('Expected consent mismatch to reject.');
+      },
+      (error) => {
+        expect(error).toBeInstanceOf(GenerationServiceError);
+        expect(error).toMatchObject({
+          options: { code: 'consent_mismatch', httpStatus: 403 },
+        });
+      },
+    );
+
+    expect(vertexClient.enqueueJob).not.toHaveBeenCalled();
+  });
+
+  it('throws when persona asset missing on profile', async () => {
+    const profileRow: Database['public']['Tables']['profiles']['Row'] = {
+      user_id: 'user-1',
+      consent_version: 'v1',
+      consent_accepted_at: new Date().toISOString(),
+      created_at: new Date().toISOString(),
+      updated_at: new Date().toISOString(),
+      persona_path: null,
+      cloth_path: null,
+      cloth_expires_at: null,
+      free_generation_quota: 5,
+      free_generation_used: 1,
+      quota_renewal_at: null,
+    };
+
+    const { supabase } = buildSupabaseWithProfile(profileRow);
+    const vertexClient = { enqueueJob: vi.fn() };
+
+    await expect(
+      createGeneration(
+        {
+          garment: createPngBlob(),
+          garmentFilename: 'garment.png',
+          consentVersion: 'v1',
+          retainForHours: 48,
+        },
+        {
+          userId: profileRow.user_id,
+          supabase,
+          env: defaultEnv,
+          vertexClient,
+        },
+      ),
+    ).rejects.toMatchObject({
+      options: { code: 'persona_missing', httpStatus: 403 },
+    });
+
+    expect(vertexClient.enqueueJob).not.toHaveBeenCalled();
+  });
+
+  it('defaults retainForHours to 48 when not provided', async () => {
+    const profileRow: Database['public']['Tables']['profiles']['Row'] = {
+      user_id: 'user-1',
+      consent_version: 'v1',
+      consent_accepted_at: new Date().toISOString(),
+      created_at: new Date().toISOString(),
+      updated_at: new Date().toISOString(),
+      persona_path: 'users/user-1/persona.png',
+      cloth_path: null,
+      cloth_expires_at: null,
+      free_generation_quota: 5,
+      free_generation_used: 1,
+      quota_renewal_at: null,
+    };
+
+    const { supabase } = buildSupabaseWithProfile(profileRow);
+    const vertexClient = { enqueueJob: vi.fn(async () => ({ jobId: 'vertex-job', etaSeconds: 180 })) };
+
+    await createGeneration(
+      {
+        garment: createPngBlob(),
+        garmentFilename: 'garment.png',
+        consentVersion: 'v1',
+      },
+      {
+        userId: profileRow.user_id,
+        supabase,
+        env: defaultEnv,
+        vertexClient,
+        idFactory: () => 'gen-default-retention',
+      },
+    );
+
+    expect(vertexClient.enqueueJob).toHaveBeenCalledWith(
+      expect.objectContaining({
+        retainForHours: 48,
+      }),
+    );
+  });
+
+  it('rejects non-integer retention values', async () => {
+    const profileRow: Database['public']['Tables']['profiles']['Row'] = {
+      user_id: 'user-1',
+      consent_version: 'v1',
+      consent_accepted_at: new Date().toISOString(),
+      created_at: new Date().toISOString(),
+      updated_at: new Date().toISOString(),
+      persona_path: 'users/user-1/persona.png',
+      cloth_path: null,
+      cloth_expires_at: null,
+      free_generation_quota: 5,
+      free_generation_used: 1,
+      quota_renewal_at: null,
+    };
+
+    const { supabase } = buildSupabaseWithProfile(profileRow);
+    const vertexClient = { enqueueJob: vi.fn() };
+
+    await expect(
+      createGeneration(
+        {
+          garment: createPngBlob(),
+          garmentFilename: 'garment.png',
+          consentVersion: 'v1',
+          retainForHours: 36.5,
+        },
+        {
+          userId: profileRow.user_id,
+          supabase,
+          env: defaultEnv,
+          vertexClient,
+        },
+      ),
+    ).rejects.toMatchObject({
+      options: { code: 'invalid_request', httpStatus: 400 },
+    });
+  });
+
+  it('rejects retention shorter than 24 hours', async () => {
+    const profileRow: Database['public']['Tables']['profiles']['Row'] = {
+      user_id: 'user-1',
+      consent_version: 'v1',
+      consent_accepted_at: new Date().toISOString(),
+      created_at: new Date().toISOString(),
+      updated_at: new Date().toISOString(),
+      persona_path: 'users/user-1/persona.png',
+      cloth_path: null,
+      cloth_expires_at: null,
+      free_generation_quota: 5,
+      free_generation_used: 1,
+      quota_renewal_at: null,
+    };
+
+    const { supabase } = buildSupabaseWithProfile(profileRow);
+    const vertexClient = { enqueueJob: vi.fn() };
+
+    await expect(
+      createGeneration(
+        {
+          garment: createPngBlob(),
+          garmentFilename: 'garment.png',
+          consentVersion: 'v1',
+          retainForHours: 12,
+        },
+        {
+          userId: profileRow.user_id,
+          supabase,
+          env: defaultEnv,
+          vertexClient,
+        },
+      ),
+    ).rejects.toMatchObject({
+      options: { code: 'invalid_request', httpStatus: 400 },
+    });
+  });
+
+  it('rejects retention longer than 72 hours', async () => {
+    const profileRow: Database['public']['Tables']['profiles']['Row'] = {
+      user_id: 'user-1',
+      consent_version: 'v1',
+      consent_accepted_at: new Date().toISOString(),
+      created_at: new Date().toISOString(),
+      updated_at: new Date().toISOString(),
+      persona_path: 'users/user-1/persona.png',
+      cloth_path: null,
+      cloth_expires_at: null,
+      free_generation_quota: 5,
+      free_generation_used: 1,
+      quota_renewal_at: null,
+    };
+
+    const { supabase } = buildSupabaseWithProfile(profileRow);
+    const vertexClient = { enqueueJob: vi.fn() };
+
+    await expect(
+      createGeneration(
+        {
+          garment: createPngBlob(),
+          garmentFilename: 'garment.png',
+          consentVersion: 'v1',
+          retainForHours: 96,
+        },
+        {
+          userId: profileRow.user_id,
+          supabase,
+          env: defaultEnv,
+          vertexClient,
+        },
+      ),
+    ).rejects.toMatchObject({
+      options: { code: 'invalid_request', httpStatus: 400 },
+    });
+  });
+
+  it('throws when garment blob missing', async () => {
+    const profileRow: Database['public']['Tables']['profiles']['Row'] = {
+      user_id: 'user-1',
+      consent_version: 'v1',
+      consent_accepted_at: new Date().toISOString(),
+      created_at: new Date().toISOString(),
+      updated_at: new Date().toISOString(),
+      persona_path: 'users/user-1/persona.png',
+      cloth_path: null,
+      cloth_expires_at: null,
+      free_generation_quota: 5,
+      free_generation_used: 1,
+      quota_renewal_at: null,
+    };
+
+    const { supabase } = buildSupabaseWithProfile(profileRow);
+    const vertexClient = { enqueueJob: vi.fn() };
+
+    await expect(
+      createGeneration(
+        {
+          garment: undefined as unknown as Blob,
+          garmentFilename: 'garment.png',
+          consentVersion: 'v1',
+          retainForHours: 48,
+        },
+        {
+          userId: profileRow.user_id,
+          supabase,
+          env: defaultEnv,
+          vertexClient,
+        },
+      ),
+    ).rejects.toMatchObject({
+      options: { code: 'invalid_request', httpStatus: 400 },
+    });
+  });
+
+  it('throws when garment filename missing', async () => {
+    const profileRow: Database['public']['Tables']['profiles']['Row'] = {
+      user_id: 'user-1',
+      consent_version: 'v1',
+      consent_accepted_at: new Date().toISOString(),
+      created_at: new Date().toISOString(),
+      updated_at: new Date().toISOString(),
+      persona_path: 'users/user-1/persona.png',
+      cloth_path: null,
+      cloth_expires_at: null,
+      free_generation_quota: 5,
+      free_generation_used: 1,
+      quota_renewal_at: null,
+    };
+
+    const { supabase } = buildSupabaseWithProfile(profileRow);
+    const vertexClient = { enqueueJob: vi.fn() };
+
+    await expect(
+      createGeneration(
+        {
+          garment: createPngBlob(),
+          garmentFilename: '',
+          consentVersion: 'v1',
+          retainForHours: 48,
+        },
+        {
+          userId: profileRow.user_id,
+          supabase,
+          env: defaultEnv,
+          vertexClient,
+        },
+      ),
+    ).rejects.toMatchObject({
+      options: { code: 'invalid_request', httpStatus: 400 },
+    });
   });
 });

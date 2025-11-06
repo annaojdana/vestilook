@@ -1,4 +1,5 @@
 import { afterAll, afterEach, beforeAll, vi } from "vitest";
+import "@testing-library/jest-dom/vitest";
 
 export let server: {
   listen: (options?: { onUnhandledRequest?: "error" | "warn" | "bypass" }) => void;
@@ -11,6 +12,9 @@ const isVitest = typeof process !== "undefined" && Boolean(process.env?.VITEST_W
 if (isVitest) {
   const { setupServer } = await import("msw/node");
   server = setupServer();
+
+  process.env.PUBLIC_SUPABASE_URL ??= "https://test.supabase.co";
+  process.env.PUBLIC_SUPABASE_ANON_KEY ??= "test-anon-key";
 
   beforeAll(() => {
     if (!("ResizeObserver" in globalThis)) {

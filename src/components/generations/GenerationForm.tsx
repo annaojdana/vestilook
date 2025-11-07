@@ -1,5 +1,5 @@
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import type { FormEvent } from "react";
+import { useCallback, useEffect, useMemo, useRef } from "react";
+import { FormProvider, useForm } from "react-hook-form";
 
 import type { ImageValidationConstraints, ProfileResponseDto } from "@/types.ts";
 
@@ -11,13 +11,15 @@ import { QuotaIndicator } from "./QuotaIndicator.tsx";
 import { RetentionSelector } from "./RetentionSelector.tsx";
 import { useGarmentValidation } from "./hooks/useGarmentValidation.ts";
 import { useGenerationSubmission } from "./hooks/useGenerationSubmission.ts";
+import type { GenerationErrorState } from "./types.ts";
 import {
-  type ConsentFormState,
-  type GenerationFormState,
-  type GenerationErrorState,
-  type QuotaViewModel,
-  type RetentionOption,
-} from "./types.ts";
+  createFormError,
+  normalizeDetailsBasePath,
+  normalizeRetentionValue,
+  RETENTION_ALLOWED_VALUES,
+  RETENTION_OPTIONS,
+  useGenerationFormController,
+} from "./hooks/useGenerationFormController.ts";
 
 export interface GenerationFormProps {
   initialProfile: ProfileResponseDto;
@@ -28,25 +30,10 @@ export interface GenerationFormProps {
   onSuccess?(generationId: string): void;
 }
 
-const RETENTION_ALLOWED_VALUES = [24, 48, 72] as const;
-const DEFAULT_RETENTION = 48;
-const RETENTION_OPTIONS: RetentionOption[] = [
-  {
-    value: 24,
-    label: "24 godziny",
-    description: "Idealne dla szybkich iteracji. Wyniki znikną w ciągu doby.",
-  },
-  {
-    value: 48,
-    label: "48 godzin",
-    description: "Domyślna retencja. Masz dwa dni na pobranie efektów.",
-  },
-  {
-    value: 72,
-    label: "72 godziny",
-    description: "Maksymalny czas przechowywania w ramach planu podstawowego.",
-  },
-];
+interface GenerationFormFields {
+  retainForHours: number;
+  consentChecked: boolean;
+}
 
 export default function GenerationForm({
   initialProfile,
@@ -57,9 +44,13 @@ export default function GenerationForm({
   onSuccess,
 }: GenerationFormProps) {
   const retention = useMemo(() => normalizeRetentionValue(defaultRetention), [defaultRetention]);
-  const [formState, setFormState] = useState<GenerationFormState>(() =>
-    createInitialFormState(initialProfile, retention)
-  );
+  const form = useForm<GenerationFormFields>({
+    mode: "onChange",
+    defaultValues: {
+      retainForHours: retention,
+      consentChecked: false,
+    },
+  });
 
   const submission = useGenerationSubmission({ profile: initialProfile });
   const garmentValidation = useGarmentValidation(constraints);
@@ -68,15 +59,19 @@ export default function GenerationForm({
   const previousPreviewUrl = useRef<string | null>(null);
 
   const basePath = useMemo(() => normalizeDetailsBasePath(detailsBasePath), [detailsBasePath]);
+  const { state, actions } = useGenerationFormController({
+    profile: initialProfile,
+    retention,
+  });
   const consentRequiresUpdate =
-    !formState.consent.isCompliant || formState.consent.acceptedVersion !== formState.consent.currentVersion;
-  const quotaLocked = formState.quota.hardLimitReached || formState.quota.remaining <= 0;
+    !state.consent.isCompliant || state.consent.acceptedVersion !== state.consent.currentVersion;
+  const quotaLocked = state.quota.hardLimitReached || state.quota.remaining <= 0;
   const submitDisabled =
     submission.submitting ||
     garmentValidation.validating ||
-    !formState.garment ||
+    !state.garment ||
     quotaLocked ||
-    !formState.consent.checkboxChecked;
+    !state.consent.checkboxChecked;
 
   useEffect(() => {
     if (previousUserIdRef.current === initialProfile.userId) {
@@ -84,122 +79,64 @@ export default function GenerationForm({
     }
 
     previousUserIdRef.current = initialProfile.userId;
-    setFormState(createInitialFormState(initialProfile, retention));
-  }, [initialProfile.userId, retention]);
+    actions.resetState(initialProfile, retention);
+    form.reset({
+      retainForHours: retention,
+      consentChecked: false,
+    });
+  }, [actions, form, initialProfile, retention]);
 
   useEffect(() => {
-    setFormState((current) => {
-      if (current.retainForHours === retention) {
-        return current;
-      }
-
-      return {
-        ...current,
-        retainForHours: retention,
-      };
-    });
-  }, [retention]);
+    form.setValue("retainForHours", state.retainForHours, { shouldDirty: false });
+  }, [form, state.retainForHours]);
 
   useEffect(() => {
-    setFormState((current) => {
-      const nextQuota = mapQuotaViewModel(submission.profile);
-      const nextConsentSnapshot = submission.profile.consent;
-      const quotaChanged = hasQuotaChanged(current.quota, nextQuota);
-      const consentChanged = hasConsentChanged(current.consent, nextConsentSnapshot);
+    form.setValue("consentChecked", state.consent.checkboxChecked, { shouldDirty: false });
+  }, [form, state.consent.checkboxChecked]);
 
-      if (!quotaChanged && !consentChanged) {
-        return current;
-      }
-
-      return {
-        ...current,
-        quota: quotaChanged ? nextQuota : current.quota,
-        consent: consentChanged
-          ? {
-              ...current.consent,
-              currentVersion: nextConsentSnapshot.currentVersion,
-              acceptedVersion: nextConsentSnapshot.acceptedVersion,
-              acceptedAt: nextConsentSnapshot.acceptedAt,
-              isCompliant: nextConsentSnapshot.isCompliant,
-              checkboxChecked: nextConsentSnapshot.isCompliant ? current.consent.checkboxChecked : false,
-            }
-          : current.consent,
-      };
-    });
-  }, [submission.profile]);
+  useEffect(() => {
+    actions.syncProfile(submission.profile);
+  }, [actions, submission.profile]);
 
   useEffect(() => {
     if (!submission.error) {
       return;
     }
 
-    setFormState((current) => {
-      if (current.error === submission.error && current.status === "error") {
-        return current;
-      }
-
-      return {
-        ...current,
-        status: "error",
-        error: submission.error,
-      };
-    });
-  }, [submission.error]);
+    actions.setError(submission.error);
+    actions.setStatus("error");
+  }, [actions, submission.error]);
 
   useEffect(() => {
     if (!garmentValidation.error) {
-      setFormState((current) => {
-        if (current.status !== "error" || current.error) {
-          return current;
-        }
-
-        return {
-          ...current,
-          status: "idle",
-        };
-      });
+      if (state.status === "error" && !state.error) {
+        actions.setStatus("idle");
+      }
       return;
     }
 
-    setFormState((current) => {
-      if (current.status === "error") {
-        return current;
-      }
-
-      return {
-        ...current,
-        status: "error",
-      };
-    });
-  }, [garmentValidation.error]);
+    actions.setStatus("error");
+  }, [actions, garmentValidation.error, state.error, state.status]);
 
   useEffect(() => {
-    setFormState((current) => {
-      if (submission.submitting) {
-        if (current.status === "submitting") {
-          return current;
-        }
-        return { ...current, status: "submitting" };
-      }
+    if (submission.submitting) {
+      actions.setStatus("submitting");
+      return;
+    }
 
-      if (garmentValidation.validating) {
-        if (current.status === "validating") {
-          return current;
-        }
-        return { ...current, status: "validating" };
-      }
+    if (garmentValidation.validating) {
+      actions.setStatus("validating");
+      return;
+    }
 
-      if (current.status === "submitting" || current.status === "validating") {
-        return { ...current, status: current.error ? "error" : "idle" };
-      }
-
-      return current;
-    });
-  }, [garmentValidation.validating, submission.submitting]);
+    if (state.status === "submitting" || state.status === "validating") {
+      actions.setStatus(state.error ? "error" : "idle");
+    }
+  }, [actions, garmentValidation.validating, state.error, state.status, submission.submitting]);
 
   useEffect(() => {
     const previousUrl = previousPreviewUrl.current;
-    const nextUrl = formState.garment?.previewUrl ?? null;
+    const nextUrl = state.garment?.previewUrl ?? null;
 
     if (previousUrl && previousUrl !== nextUrl) {
       URL.revokeObjectURL(previousUrl);
@@ -212,50 +149,44 @@ export default function GenerationForm({
         URL.revokeObjectURL(nextUrl);
       }
     };
-  }, [formState.garment]);
+  }, [state.garment]);
 
   const handleGarmentChange = useCallback(
     async (files: FileList | null) => {
       submission.resetError();
       garmentValidation.resetError();
+      actions.setError(null);
 
       const validated = await garmentValidation.validate(files);
 
-      setFormState((current) => ({
-        ...current,
-        garment: validated,
-        error: null,
-        status: validated ? (current.status === "success" ? "success" : "idle") : "error",
-      }));
+      actions.setGarment(validated ?? null);
+      actions.setStatus(
+        validated ? (state.status === "success" ? "success" : "idle") : "error",
+      );
     },
-    [garmentValidation, submission]
+    [actions, garmentValidation, state.status, submission],
   );
 
   const handleGarmentClear = useCallback(() => {
     garmentValidation.resetError();
     submission.resetError();
-    setFormState((current) => ({
-      ...current,
-      garment: null,
-      error: null,
-      status: current.status === "success" ? "success" : "idle",
-    }));
-  }, [garmentValidation, submission]);
+    actions.setGarment(null);
+    actions.setError(null);
+    actions.setStatus(state.status === "success" ? "success" : "idle");
+  }, [actions, garmentValidation, state.status, submission]);
 
   const handleConsentToggle = useCallback(
     (checked: boolean) => {
       submission.resetError();
-      setFormState((current) => ({
-        ...current,
-        consent: {
-          ...current.consent,
-          checkboxChecked: checked,
-        },
-        error: null,
-        status: checked ? (current.status === "success" ? "success" : "idle") : "error",
-      }));
+      actions.setError(null);
+      actions.setConsentChecked(checked);
+      form.setValue("consentChecked", checked, { shouldDirty: true });
+      if (checked) {
+        form.clearErrors("consentChecked");
+      }
+      actions.setStatus(checked ? (state.status === "success" ? "success" : "idle") : "error");
     },
-    [submission]
+    [actions, form, state.status, submission],
   );
 
   const handleRetentionChange = useCallback((value: number) => {
@@ -263,223 +194,132 @@ export default function GenerationForm({
       return;
     }
 
-    setFormState((current) => ({
-      ...current,
-      retainForHours: value,
-      error: null,
-      status: current.status === "success" ? "success" : current.status === "error" ? "idle" : current.status,
-    }));
-  }, []);
+    form.setValue("retainForHours", value, { shouldDirty: true });
+    actions.setRetentionValue(value);
+    actions.setError(null);
+    if (state.status === "error" && !state.error) {
+      actions.setStatus("idle");
+    }
+  }, [actions, form, state.error, state.status]);
 
-  const handleSubmit = useCallback(
-    async (event: FormEvent<HTMLFormElement>) => {
-      event.preventDefault();
-      submission.resetError();
-      garmentValidation.resetError();
-      setFormState((current) => ({
-        ...current,
-        error: null,
-        status: current.status === "success" ? "success" : "idle",
-      }));
+  const handleSubmit = useMemo(
+    () =>
+      form.handleSubmit(async () => {
+        submission.resetError();
+        garmentValidation.resetError();
+        actions.setError(null);
+        actions.setStatus(state.status === "success" ? "success" : "idle");
 
-      const { garment, consent, quota, retainForHours } = formState;
+        const { garment, consent, quota, retainForHours } = state;
 
-      if (!garment) {
-        setFormState((current) => ({
-          ...current,
-          status: "error",
-          error: createFormError("garment_missing", "Dodaj zdjęcie ubrania przed uruchomieniem generacji.", "garment"),
-        }));
-        return;
-      }
+        if (!garment) {
+          const nextError = createFormError(
+            "garment_missing",
+            "Dodaj zdjęcie ubrania przed uruchomieniem generacji.",
+            "garment",
+          );
+          actions.setError(nextError);
+          actions.setStatus("error");
+          return;
+        }
 
-      if (!consent.checkboxChecked) {
-        setFormState((current) => ({
-          ...current,
-          status: "error",
-          error: createFormError(
+        if (!consent.checkboxChecked) {
+          const consentError = createFormError(
             "consent_unchecked",
             "Potwierdź zgodę na przetwarzanie wizerunku, aby kontynuować.",
-            "consent"
-          ),
-        }));
-        return;
-      }
+            "consent",
+          );
+          actions.setError(consentError);
+          actions.setStatus("error");
+          form.setError("consentChecked", { type: "manual", message: consentError.message });
+          return;
+        }
 
-      if (quota.hardLimitReached || quota.remaining <= 0) {
-        setFormState((current) => ({
-          ...current,
-          status: "error",
-          error: createFormError(
+        if (quota.hardLimitReached || quota.remaining <= 0) {
+          const quotaError = createFormError(
             "quota_exhausted",
             "Limit darmowych generacji został wykorzystany. Odczekaj do odnowienia puli.",
-            "form"
-          ),
-        }));
-        return;
-      }
+            "form",
+          );
+          actions.setError(quotaError);
+          actions.setStatus("error");
+          return;
+        }
 
-      const outcome = await submission.submitGeneration({
-        garment,
-        consent,
-        retainForHours,
-      });
+        const outcome = await submission.submitGeneration({
+          garment,
+          consent,
+          retainForHours,
+        });
 
-      if (!outcome) {
-        setFormState((current) => ({
-          ...current,
-          status: "error",
-        }));
-        return;
-      }
+        if (!outcome) {
+          actions.setStatus("error");
+          return;
+        }
 
-      const updatedProfile = outcome.refreshedProfile ?? submission.profile;
+        const updatedProfile = outcome.refreshedProfile ?? submission.profile;
+        actions.applySubmissionSuccess({
+          profile: updatedProfile,
+          consentReceipt: outcome.consentReceipt,
+        });
 
-      setFormState((current) => ({
-        ...current,
-        garment: null,
-        retainForHours: current.retainForHours,
-        quota: mapQuotaViewModel(updatedProfile),
-        consent: {
-          ...current.consent,
-          acceptedVersion: outcome.consentReceipt?.acceptedVersion ?? updatedProfile.consent.acceptedVersion,
-          acceptedAt: outcome.consentReceipt?.acceptedAt ?? updatedProfile.consent.acceptedAt,
-          isCompliant: true,
-          checkboxChecked: true,
-        },
-        status: "success",
-        error: null,
-      }));
-
-      const targetPath = `${basePath}/${outcome.generation.id}`;
-      if (onSuccess) {
-        onSuccess(outcome.generation.id);
-      } else if (typeof window !== "undefined") {
-        window.location.assign(targetPath);
-      }
-    },
-    [basePath, formState, garmentValidation, onSuccess, submission]
+        const targetPath = `${basePath}/${outcome.generation.id}`;
+        if (onSuccess) {
+          onSuccess(outcome.generation.id);
+        } else if (typeof window !== "undefined") {
+          window.location.assign(targetPath);
+        }
+      }),
+    [
+      actions,
+      basePath,
+      form,
+      garmentValidation,
+      onSuccess,
+      state,
+      submission,
+    ],
   );
 
   return (
-    <form className="flex flex-col gap-8" onSubmit={handleSubmit} data-testid="generation-form">
-      <QuotaIndicator quota={formState.quota} />
-      <GarmentUploadField
-        value={formState.garment}
-        error={garmentValidation.error}
-        validating={garmentValidation.validating}
-        constraints={constraints}
-        onFileSelect={handleGarmentChange}
-        onClear={handleGarmentClear}
-      />
-      <ConsentReaffirmation
-        state={formState.consent}
-        onToggle={handleConsentToggle}
-        policyUrl={consentPolicyUrl}
-        disabled={submission.submitting}
-      />
-      <RetentionSelector
-        value={formState.retainForHours}
-        options={RETENTION_OPTIONS}
-        disabled={submission.submitting}
-        onChange={handleRetentionChange}
-      />
-      <FormAlerts
-        status={formState.status}
-        formError={submission.error ?? formState.error}
-        garmentError={garmentValidation.error}
-        quotaLocked={quotaLocked}
-        consentOutdated={consentRequiresUpdate && !formState.consent.checkboxChecked}
-      />
-      <div className="flex justify-end">
-        <GeneratePrimaryButton
-          disabled={submitDisabled}
-          loading={submission.submitting}
-          remainingQuota={formState.quota.remaining}
+    <FormProvider {...form}>
+      <form className="flex flex-col gap-8" onSubmit={handleSubmit} data-testid="generation-form">
+        <QuotaIndicator quota={state.quota} />
+        <GarmentUploadField
+          value={state.garment}
+          error={garmentValidation.error}
+          validating={garmentValidation.validating}
+          constraints={constraints}
+          onFileSelect={handleGarmentChange}
+          onClear={handleGarmentClear}
         />
-      </div>
-    </form>
+        <ConsentReaffirmation
+          state={state.consent}
+          onToggle={handleConsentToggle}
+          policyUrl={consentPolicyUrl}
+          disabled={submission.submitting}
+        />
+        <RetentionSelector
+          value={state.retainForHours}
+          options={RETENTION_OPTIONS}
+          disabled={submission.submitting}
+          onChange={handleRetentionChange}
+        />
+        <FormAlerts
+          status={state.status}
+          formError={submission.error ?? state.error}
+          garmentError={garmentValidation.error}
+          quotaLocked={quotaLocked}
+          consentOutdated={consentRequiresUpdate && !state.consent.checkboxChecked}
+        />
+        <div className="flex justify-end">
+          <GeneratePrimaryButton
+            disabled={submitDisabled}
+            loading={submission.submitting}
+            remainingQuota={state.quota.remaining}
+          />
+        </div>
+      </form>
+    </FormProvider>
   );
-}
-
-function createInitialFormState(profile: ProfileResponseDto, retention: number): GenerationFormState {
-  const consent = buildConsentState(profile);
-  const quota = mapQuotaViewModel(profile);
-
-  return {
-    garment: null,
-    consent,
-    retainForHours: retention,
-    quota,
-    status: "idle",
-    error: null,
-  };
-}
-
-function buildConsentState(profile: ProfileResponseDto): ConsentFormState {
-  return {
-    currentVersion: profile.consent.currentVersion,
-    acceptedVersion: profile.consent.acceptedVersion,
-    acceptedAt: profile.consent.acceptedAt,
-    isCompliant: profile.consent.isCompliant,
-    checkboxChecked: false,
-  };
-}
-
-function mapQuotaViewModel(profile: ProfileResponseDto): QuotaViewModel {
-  const { total, remaining, renewsAt } = profile.quota.free;
-  const hardLimitReached = remaining <= 0;
-
-  return {
-    total,
-    remaining,
-    renewsAt,
-    hardLimitReached,
-  };
-}
-
-function hasQuotaChanged(previous: QuotaViewModel, next: QuotaViewModel): boolean {
-  return (
-    previous.remaining !== next.remaining ||
-    previous.total !== next.total ||
-    previous.renewsAt !== next.renewsAt ||
-    previous.hardLimitReached !== next.hardLimitReached
-  );
-}
-
-function hasConsentChanged(consent: ConsentFormState, snapshot: ProfileResponseDto["consent"]): boolean {
-  return (
-    consent.currentVersion !== snapshot.currentVersion ||
-    consent.acceptedVersion !== snapshot.acceptedVersion ||
-    consent.acceptedAt !== snapshot.acceptedAt ||
-    consent.isCompliant !== snapshot.isCompliant
-  );
-}
-
-function normalizeRetentionValue(retention?: number): number {
-  if (!retention || !RETENTION_ALLOWED_VALUES.includes(retention as (typeof RETENTION_ALLOWED_VALUES)[number])) {
-    return DEFAULT_RETENTION;
-  }
-
-  return retention;
-}
-
-function normalizeDetailsBasePath(candidate?: string): string {
-  if (!candidate) {
-    return "/generations";
-  }
-
-  if (candidate === "/") {
-    return "";
-  }
-
-  return candidate.endsWith("/") ? candidate.slice(0, -1) : candidate;
-}
-
-function createFormError(code: string, message: string, field: GenerationErrorState["field"]): GenerationErrorState {
-  return {
-    code,
-    message,
-    field,
-  };
 }

@@ -12,4 +12,4 @@ All notable changes to this project will be documented in this file.
 
 ### Changed
 - Zmodernizowany layout `/generations/new` (gradient, responsywne kolumny, tryb dark) dla zwiększenia czytelności i UX.
-
+- Refaktoryzacja `GenerationForm` – nowy `useGenerationFormController`, integracja z React Hook Form, lżejsze zarządzanie stanem i nowe testy kontrolera.

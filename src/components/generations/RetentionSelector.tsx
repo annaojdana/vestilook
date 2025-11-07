@@ -11,7 +11,10 @@ export interface RetentionSelectorProps {
 
 export function RetentionSelector({ value, options, disabled, onChange }: RetentionSelectorProps) {
   return (
-    <section className="space-y-3 rounded-xl border border-muted-foreground/20 bg-background p-5">
+    <section
+      className="space-y-3 rounded-xl border border-muted-foreground/20 bg-background p-5"
+      data-testid="retention-section"
+    >
       <header>
         <h2 className="text-lg font-semibold text-foreground">Retencja wygenerowanych stylizacji</h2>
         <p className="text-sm text-muted-foreground">
@@ -20,13 +23,19 @@ export function RetentionSelector({ value, options, disabled, onChange }: Retent
         </p>
       </header>
 
-      <RadioGroup value={String(value)} onValueChange={(next) => onChange(Number.parseInt(next, 10))} className="grid gap-3 sm:grid-cols-3">
+      <RadioGroup
+        value={String(value)}
+        onValueChange={(next) => onChange(Number.parseInt(next, 10))}
+        className="grid gap-3 sm:grid-cols-3"
+        data-testid="retention-options"
+      >
         {options.map((option) => (
           <label
             key={option.value}
             htmlFor={`retention-${option.value}`}
             className="flex cursor-pointer flex-col gap-2 rounded-lg border border-muted-foreground/20 bg-muted/10 p-4 text-left transition hover:border-primary focus-within:border-primary focus-within:ring-2 focus-within:ring-primary/40 data-[disabled=true]:cursor-not-allowed data-[disabled=true]:opacity-60"
             data-disabled={disabled}
+            data-testid={`retention-option-${option.value}`}
           >
             <div className="flex items-center gap-3">
               <RadioGroupItem

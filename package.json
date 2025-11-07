@@ -4,6 +4,7 @@
   "version": "0.0.1",
   "scripts": {
     "dev": "astro dev",
+    "dev:e2e": "astro dev --mode test",
     "build": "astro build",
     "preview": "astro preview",
     "astro": "astro",
@@ -52,12 +53,14 @@
   "devDependencies": {
     "@eslint/compat": "1.2.7",
     "@eslint/js": "9.23.0",
+    "@playwright/test": "^1.56.1",
     "@testing-library/jest-dom": "^6.9.1",
     "@testing-library/react": "^16.0.0",
     "@types/busboy": "^1.5.4",
     "@typescript-eslint/eslint-plugin": "8.28.0",
     "@typescript-eslint/parser": "8.28.0",
     "@vitest/coverage-v8": "^2.1.9",
+    "dotenv": "^17.2.3",
     "eslint": "9.23.0",
     "eslint-config-prettier": "10.1.1",
     "eslint-import-resolver-typescript": "4.2.5",
@@ -73,6 +76,8 @@
     "lint-staged": "15.5.0",
     "msw": "^2.7.0",
     "prettier-plugin-astro": "0.14.1",
+    "ts-node": "^10.9.2",
+    "tsx": "^4.20.6",
     "typescript-eslint": "8.28.0",
     "vitest": "^2.1.6",
     "vitest-axe": "^0.1.0"

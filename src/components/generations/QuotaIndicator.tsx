@@ -14,7 +14,7 @@ export function QuotaIndicator({ quota }: QuotaIndicatorProps) {
   const renewsAtLabel = quota.renewsAt ? new Date(quota.renewsAt).toLocaleString() : null;
 
   return (
-    <section className="rounded-xl border border-muted-foreground/20 bg-muted/10 p-5">
+    <section className="rounded-xl border border-muted-foreground/20 bg-muted/10 p-5" data-testid="quota-indicator">
       <header className="flex items-center justify-between gap-3">
         <div>
           <h2 className="text-sm font-semibold uppercase tracking-wide text-muted-foreground">Limit generacji</h2>

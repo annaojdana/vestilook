@@ -31,7 +31,7 @@ export function GarmentUploadField({
   const accept = constraints.allowedMimeTypes.join(",");
 
   return (
-    <Card className="border-dashed border-muted-foreground/20 bg-background">
+    <Card className="border-dashed border-muted-foreground/20 bg-background" data-testid="garment-upload-card">
       <CardHeader className="gap-3">
         <div className="flex items-start justify-between gap-3">
           <div>
@@ -42,7 +42,14 @@ export function GarmentUploadField({
             </CardDescription>
           </div>
           {value ? (
-            <Button type="button" variant="ghost" size="sm" onClick={onClear} aria-label="Usuń wybrany plik">
+            <Button
+              type="button"
+              variant="ghost"
+              size="sm"
+              onClick={onClear}
+              aria-label="Usuń wybrany plik"
+              data-testid="garment-upload-clear"
+            >
               <Trash2 className="size-4" aria-hidden="true" />
               Wyczyść
             </Button>
@@ -61,6 +68,7 @@ export function GarmentUploadField({
             onChange={(event) => onFileSelect(event.currentTarget.files)}
             aria-invalid={Boolean(error)}
             aria-describedby={error ? `${inputId}-error` : `${inputId}-help`}
+            data-testid="garment-upload-input"
           />
           <p id={`${inputId}-help`} className="mt-2 text-xs text-muted-foreground">
             Obsługiwane formaty: {constraints.allowedMimeTypes.join(", ")}. Minimalna rozdzielczość:{" "}
@@ -69,7 +77,10 @@ export function GarmentUploadField({
         </div>
 
         {value ? (
-          <figure className="relative overflow-hidden rounded-xl border border-muted-foreground/20 bg-muted/30">
+          <figure
+            className="relative overflow-hidden rounded-xl border border-muted-foreground/20 bg-muted/30"
+            data-testid="garment-preview"
+          >
             <img
               src={value.previewUrl}
               alt="Podgląd wybranego ubrania"
@@ -82,14 +93,17 @@ export function GarmentUploadField({
             </figcaption>
           </figure>
         ) : (
-          <div className="flex min-h-40 flex-col items-center justify-center gap-2 rounded-xl border border-dashed border-muted-foreground/30 bg-muted/10 p-6 text-center text-sm text-muted-foreground">
+          <div
+            className="flex min-h-40 flex-col items-center justify-center gap-2 rounded-xl border border-dashed border-muted-foreground/30 bg-muted/10 p-6 text-center text-sm text-muted-foreground"
+            data-testid="garment-placeholder"
+          >
             {validating ? <Loader2 className="size-5 animate-spin" aria-hidden="true" /> : <ImageIcon className="size-5" aria-hidden="true" />}
             <p>Brak wybranego pliku. Dodaj zdjęcie, aby zobaczyć podgląd.</p>
           </div>
         )}
 
         {error ? (
-          <Alert id={`${inputId}-error`} variant="destructive">
+          <Alert id={`${inputId}-error`} variant="destructive" data-testid="garment-error-alert">
             <AlertDescription>{error.message}</AlertDescription>
           </Alert>
         ) : null}

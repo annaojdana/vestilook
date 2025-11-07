@@ -362,7 +362,7 @@ export default function GenerationForm({
   );
 
   return (
-    <form className="flex flex-col gap-8" onSubmit={handleSubmit}>
+    <form className="flex flex-col gap-8" onSubmit={handleSubmit} data-testid="generation-form">
       <QuotaIndicator quota={formState.quota} />
       <GarmentUploadField
         value={formState.garment}
@@ -392,7 +392,11 @@ export default function GenerationForm({
         consentOutdated={consentRequiresUpdate && !formState.consent.checkboxChecked}
       />
       <div className="flex justify-end">
-        <GeneratePrimaryButton disabled={submitDisabled} loading={submission.submitting} remainingQuota={formState.quota.remaining} />
+        <GeneratePrimaryButton
+          disabled={submitDisabled}
+          loading={submission.submitting}
+          remainingQuota={formState.quota.remaining}
+        />
       </div>
     </form>
   );

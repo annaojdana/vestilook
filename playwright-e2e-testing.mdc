@@ -1,0 +1,35 @@
+---
+description: E2E testing with Playwright
+globs:
+alwaysApply: false
+---
+
+## TESTING
+
+### Guidelines for E2E
+
+#### PLAYWRIGHT
+
+- Initialize configuration only with Chromium/Desktop Chrome browser
+- Use browser contexts for isolating test environments
+- Implement the Page Object Model for maintainable tests in ./e2e/page-objects
+- Use `data-testid` attributes when introducing resilient test-oriented selectors
+- When following `data-testid` convention, locate elements by `await page.getByTestId('selectorName')`
+- Leverage API testing for backend validation
+- Implement visual comparison with expect(page).toHaveScreenshot()
+- Use the codegen tool for test recording
+- Leverage trace viewer for debugging test failures
+- Implement test hooks for setup and teardown
+- Use expect assertions with specific matchers
+- Leverage parallel execution for faster test runs
+- Follow 'Arrange', 'Act', 'Assert' approach to test structure for simplicity and readability.
+
+### AUTH SESSION & TEARDOWN
+
+- Global setup (`tests/e2e/global-setup.ts`) loguje użytkownika testowego przy użyciu `E2E_USERNAME`/`E2E_PASSWORD` i zapisuje stan w `tests/e2e/.auth/state.json`. Wszystkie testy Playwright uruchamiają się z tym storage state, dzięki czemu nie trzeba powtarzać logowania w każdym scenariuszu.
+- Global teardown (`tests/e2e/global-teardown.ts`) loguje się tym samym kontem Supabase i usuwa rekordy z `public.vton_generations` należące do `E2E_USERNAME_ID`, żeby baza testowa pozostawała czysta po sesji E2E.
+- Wymagane zmienne środowiskowe: `E2E_USERNAME`, `E2E_PASSWORD`, `E2E_USERNAME_ID`, `SUPABASE_URL`, `SUPABASE_KEY` (lub odpowiedniki PUBLIC\_*). Brak którejkolwiek powoduje pominięcie setupu/teardownu.
+- Artefakty sesji (`tests/e2e/.auth/state.json`) są lokalne – katalog `.auth/` jest ignorowany przez git i można regenerować stan, uruchamiając `npx playwright test` (wywoła global setup automatycznie).
+- Testy korzystają z przykładowego pliku `tests/e2e/fixtures/garment.png` spełniającego minimalne wymagania walidacji (PNG, 1200×1200 px).
+- Szybka weryfikacja teardownu: `npx tsx tests/e2e/scripts/list-generations.ts` loguje się tym samym kontem i wypisuje bieżące rekordy z `public.vton_generations`. Skrypt kończy się kodem 1, jeśli coś zostało, co ułatwia integrację z CI.
+- Dodatkowy scenariusz walidacyjny (`tests/e2e/generation-validation.spec.ts`) korzysta z fixture `garment-small.png`, aby upewnić się, że formularz blokuje zbyt małe obrazy i pokazuje alert walidacji.

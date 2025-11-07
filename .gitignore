@@ -18,9 +18,13 @@ pnpm-debug.log*
 .env.*
 *.env
 !.env.example
+.env.test
 
 # macOS-specific files
 .DS_Store
 
 # jetbrains setting folder
 .idea/
+
+# playwright auth artifacts
+tests/e2e/.auth/

@@ -21,9 +21,9 @@ export function FormAlerts({ status, formError, garmentError, quotaLocked, conse
   }
 
   return (
-    <div className="space-y-3">
+    <div className="space-y-3" data-testid="generation-form-alerts">
       {success ? (
-        <Alert variant="success" className="pl-12">
+        <Alert variant="success" className="pl-12" data-testid="generation-success-alert">
           <Sparkles className="size-5" aria-hidden="true" />
           <AlertTitle>Stylizacja została rozpoczęta</AlertTitle>
           <AlertDescription className="text-sm">
@@ -33,7 +33,7 @@ export function FormAlerts({ status, formError, garmentError, quotaLocked, conse
       ) : null}
 
       {formError ? (
-        <Alert variant="destructive" className="pl-12">
+        <Alert variant="destructive" className="pl-12" data-testid="generation-error-alert">
           <AlertCircle className="size-5" aria-hidden="true" />
           <AlertTitle>Nie udało się uruchomić generacji</AlertTitle>
           <AlertDescription className="text-sm">
@@ -48,7 +48,7 @@ export function FormAlerts({ status, formError, garmentError, quotaLocked, conse
       ) : null}
 
       {garmentError ? (
-        <Alert variant="warning" className="pl-12">
+        <Alert variant="warning" className="pl-12" data-testid="garment-validation-alert">
           <Ban className="size-5" aria-hidden="true" />
           <AlertTitle>Błąd walidacji pliku</AlertTitle>
           <AlertDescription className="text-sm">{garmentError.message}</AlertDescription>
@@ -56,7 +56,7 @@ export function FormAlerts({ status, formError, garmentError, quotaLocked, conse
       ) : null}
 
       {quotaLocked ? (
-        <Alert variant="destructive" className="pl-12">
+        <Alert variant="destructive" className="pl-12" data-testid="quota-locked-alert">
           <TimerReset className="size-5" aria-hidden="true" />
           <AlertTitle>Limit generacji został wyczerpany</AlertTitle>
           <AlertDescription className="text-sm">
@@ -66,7 +66,7 @@ export function FormAlerts({ status, formError, garmentError, quotaLocked, conse
       ) : null}
 
       {consentOutdated ? (
-        <Alert variant="warning" className="pl-12">
+        <Alert variant="warning" className="pl-12" data-testid="consent-outdated-alert">
           <ShieldAlert className="size-5" aria-hidden="true" />
           <AlertTitle>Zaktualizuj zgodę przed wysyłką</AlertTitle>
           <AlertDescription className="text-sm">

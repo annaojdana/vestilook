@@ -1,0 +1,2 @@
+.env.test
+tests/e2e/.auth/

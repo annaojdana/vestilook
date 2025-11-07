@@ -10,7 +10,12 @@ export interface GeneratePrimaryButtonProps {
 
 export function GeneratePrimaryButton({ disabled, loading, remainingQuota }: GeneratePrimaryButtonProps) {
   return (
-    <Button type="submit" className="h-12 rounded-lg text-base font-semibold" disabled={disabled}>
+    <Button
+      type="submit"
+      className="h-12 rounded-lg text-base font-semibold"
+      disabled={disabled}
+      data-testid="generation-submit-button"
+    >
       {loading ? <Loader2 className="size-4 animate-spin" aria-hidden="true" /> : <Sparkles className="size-4" aria-hidden="true" />}
       {loading ? "Generowanie trwa..." : "Generuj stylizację"}
       <span className="sr-only">

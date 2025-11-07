@@ -17,7 +17,10 @@ export function ConsentReaffirmation({ state, onToggle, policyUrl, disabled }: C
   const consentOutdated = !state.isCompliant || state.acceptedVersion !== state.currentVersion;
 
   return (
-    <section className="space-y-4 rounded-xl border border-muted-foreground/20 bg-muted/10 p-5">
+    <section
+      className="space-y-4 rounded-xl border border-muted-foreground/20 bg-muted/10 p-5"
+      data-testid="consent-section"
+    >
       <header className="flex flex-col gap-2">
         <h2 className="text-lg font-semibold text-foreground">Zgoda na przetwarzanie wizerunku</h2>
         <p className="text-sm text-muted-foreground">
@@ -33,6 +36,7 @@ export function ConsentReaffirmation({ state, onToggle, policyUrl, disabled }: C
           onCheckedChange={(checked) => onToggle(Boolean(checked))}
           disabled={disabled}
           aria-describedby="generation-consent-hint"
+          data-testid="consent-checkbox"
         />
         <div className="space-y-1">
           <Label htmlFor="generation-consent" className="text-sm font-medium text-foreground">
@@ -49,7 +53,7 @@ export function ConsentReaffirmation({ state, onToggle, policyUrl, disabled }: C
       </div>
 
       {consentOutdated ? (
-        <Alert variant="warning" className="pl-12">
+        <Alert variant="warning" className="pl-12" data-testid="consent-warning-alert">
           <ShieldAlert className="size-5" aria-hidden="true" />
           <AlertTitle>Wymagana ponowna akceptacja</AlertTitle>
           <AlertDescription className="text-sm">
@@ -57,7 +61,7 @@ export function ConsentReaffirmation({ state, onToggle, policyUrl, disabled }: C
           </AlertDescription>
         </Alert>
       ) : (
-        <Alert variant="success" className="pl-12">
+        <Alert variant="success" className="pl-12" data-testid="consent-success-alert">
           <ShieldCheck className="size-5" aria-hidden="true" />
           <AlertTitle>Zgoda aktualna</AlertTitle>
           <AlertDescription className="text-sm">

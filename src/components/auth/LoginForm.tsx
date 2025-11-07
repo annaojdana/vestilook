@@ -67,21 +67,21 @@ export function LoginForm({ redirectTo = '/onboarding/consent', errorMessage, in
   };
 
   return (
-    <Card className="w-full max-w-md">
+    <Card className="w-full max-w-md" data-testid="login-card">
       <CardHeader>
         <CardTitle>Zaloguj się do Vestilook</CardTitle>
         <CardDescription>Wpisz swoje dane, aby kontynuować</CardDescription>
       </CardHeader>
       <CardContent>
-        <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
+        <form onSubmit={handleSubmit(onSubmit)} className="space-y-4" data-testid="login-form">
           {error && (
-            <Alert variant="destructive">
+            <Alert variant="destructive" data-testid="login-error-alert">
               <AlertDescription>{error}</AlertDescription>
             </Alert>
           )}
 
           {info && (
-            <Alert>
+            <Alert data-testid="login-info-alert">
               <AlertDescription>{info}</AlertDescription>
             </Alert>
           )}
@@ -95,6 +95,7 @@ export function LoginForm({ redirectTo = '/onboarding/consent', errorMessage, in
               placeholder="twoj@email.pl"
               {...register('email')}
               disabled={isSubmitting}
+              data-testid="login-email"
             />
             {errors.email && (
               <p className="text-sm text-destructive">{errors.email.message}</p>
@@ -110,13 +111,14 @@ export function LoginForm({ redirectTo = '/onboarding/consent', errorMessage, in
               placeholder="••••••••"
               {...register('password')}
               disabled={isSubmitting}
+              data-testid="login-password"
             />
             {errors.password && (
               <p className="text-sm text-destructive">{errors.password.message}</p>
             )}
           </div>
 
-          <Button type="submit" className="w-full" disabled={isSubmitting}>
+          <Button type="submit" className="w-full" disabled={isSubmitting} data-testid="login-submit">
             {isSubmitting ? 'Logowanie...' : 'Zaloguj się'}
           </Button>
 

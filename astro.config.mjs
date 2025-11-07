@@ -6,7 +6,7 @@ import sitemap from "@astrojs/sitemap";
 import tailwindcss from "@tailwindcss/vite";
 import node from "@astrojs/node";
 
-const DEV_SERVER_PORT = Number.parseInt(process.env.VESTILOOK_DEV_PORT ?? process.env.PORT ?? "4321", 10);
+const DEV_SERVER_PORT = Number.parseInt(process.env.VESTILOOK_DEV_PORT ?? process.env.PORT ?? "4460", 10);
 const VITE_CONDITIONS = ["module-sync", "module", "browser", "import", "default"];
 const VITE_SSR_CONDITIONS = ["module-sync", "module", "import", "node", "default"];
 
@@ -19,6 +19,11 @@ export default defineConfig({
     plugins: [tailwindcss()],
     resolve: {
       conditions: VITE_CONDITIONS,
+    },
+    optimizeDeps: {
+      esbuildOptions: {
+        conditions: [...VITE_CONDITIONS, "node"],
+      },
     },
     ssr: {
       resolve: {

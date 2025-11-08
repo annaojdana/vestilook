@@ -44,6 +44,7 @@ Vestilook delivers photorealistic virtual try-on previews by combining a user’
    - `PRIVATE_VTON_MAX_GARMENT_BYTES`, `PRIVATE_VTON_MIN_GARMENT_WIDTH`, `PRIVATE_VTON_MIN_GARMENT_HEIGHT`, `PRIVATE_VTON_ALLOWED_GARMENT_MIME`
    - `VITE_VTON_DEFAULT_ETA_SECONDS`
    - `PUBLIC_CONSENT_POLICY_URL` – link do aktualnej polityki przetwarzania wizerunku wyświetlanej w formularzu generacji. Repozytorium dostarcza domyślną stronę pod `/legal/polityka-przetwarzania-wizerunku`, którą możesz podmienić lub rozszerzyć według potrzeb prawnych.
+   - Po ustawieniu `.env` uruchom `supabase db reset` (lub `supabase db push`), aby zastosować migracje. Ten krok tworzy prywatne kosze Storage (`vestilook-personas`, `vestilook-garments`, `vestilook-generations`) i potrzebne polityki RLS – bez nich upload Persony zakończy się błędem „Unable to store persona”.
 4. Start the development server:
    ```bash
    npm run dev
@@ -65,7 +66,8 @@ Vestilook delivers photorealistic virtual try-on previews by combining a user’
 - `npm run astro` — Run arbitrary Astro CLI commands.
 
 ## 6. Project Scope
-- **In scope (MVP):** Single-persona VTON flow, Supabase-backed storage/auth, high-resolution downloads, client-side upload validation (format, ≥512×512), explicit consent gating, cost-limiting per user, automated cleanup of garments/results after 2–3 dni.
+- **In scope (MVP):** Single-persona VTON flow, Supabase-backed storage/auth, high-resolution downloads, client-side upload validation (format, ≥512×512), explicit consent gating, cost-limiting per user, automated cleanup of garments/results po 2–3 dniach.
+- **Onboarding:** trzyetapowy proces (zgoda → persona → przygotowanie ubrania), gdzie nowa strona `/onboarding/garment` prezentuje checklistę jakości i kieruje użytkownika do pierwszej generacji.
 - **Out of scope (MVP):** Multiple personas, store catalog integrations or URL-based uploads, advanced persona editing, alternative AI models, extended GCP auth hardening.
 
 ## 7. Project Status

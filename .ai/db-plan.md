@@ -65,4 +65,5 @@
    - `cloth_expires_at` wyznacza logikę czyszczenia; harmonogram Supabase powinien usuwać rekord i powiązany plik po upływie TTL, korzystając z tych samych zasad RLS (akcje wykonywane w kontekście użytkownika lub funkcji RPC).
    - Przy każdej generacji zapisywane są momentalne ścieżki Persony i ubrania w `vton_generations`, co ułatwia audyt oraz powiązanie wyników z plikami Storage nawet po aktualizacji `profiles`.
    - Warto przechowywać `result_path` i `expires_at` dla jawnego czyszczenia wygenerowanych obrazów zgodnie z wymaganiem 2–3 dni retencji.
+   - Storage: trzy prywatne kosze (`vestilook-personas`, `vestilook-garments`, `vestilook-generations`) są provisionowane migracją wraz z funkcją pomocniczą `storage_path_owned_by_auth_user(object_name, allowed_prefixes)` i politykami RLS. Każdy obiekt musi znajdować się w katalogu `personas/<auth.uid()>/*` lub `users/<auth.uid()>/*`, co umożliwia kopiowanie Persony do snapshotów i równocześnie blokuje dostęp do cudzych zasobów.
 ``` 

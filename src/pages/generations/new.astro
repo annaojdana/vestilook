@@ -1,5 +1,6 @@
 ---
 import type { AstroCookies } from "astro";
+import type { SupabaseClient } from "@supabase/supabase-js";
 import { Suspense, createElement } from "react";
 
 import Layout from "../../layouts/Layout.astro";
@@ -13,12 +14,19 @@ interface PrefetchResult {
   error?: string;
 }
 
-async function prefetchProfile(cookies: AstroCookies): Promise<PrefetchResult> {
-  const accessTokenCookie = resolveSupabaseAccessToken(cookies);
-  const accessToken = accessTokenCookie?.value ?? null;
+async function prefetchProfile(
+  cookies: AstroCookies,
+  headers: Headers,
+  supabase: SupabaseClient | null,
+): Promise<PrefetchResult> {
+  const accessTokenCookie = resolveSupabaseAccessToken(cookies, headers);
+  const sessionToken = await resolveSessionAccessToken(supabase);
+  const accessToken = sessionToken ?? accessTokenCookie?.value ?? null;
 
   if (accessTokenCookie) {
     ensureClientReadableCookie(accessTokenCookie.name, accessTokenCookie.value, cookies);
+  } else if (accessToken) {
+    ensureClientReadableCookie("sb-access-token", accessToken, cookies);
   }
 
   if (!accessToken) {
@@ -55,7 +63,23 @@ async function prefetchProfile(cookies: AstroCookies): Promise<PrefetchResult> {
   }
 }
 
-function resolveSupabaseAccessToken(cookies: AstroCookies) {
+async function resolveSessionAccessToken(supabase: SupabaseClient | null): Promise<string | null> {
+  if (!supabase) {
+    return null;
+  }
+
+  try {
+    const sessionResult = await supabase.auth.getSession();
+    return sessionResult.data.session?.access_token ?? null;
+  } catch (error) {
+    console.warn("[generations/new] Failed to resolve Supabase session token.", error);
+    return null;
+  }
+}
+
+type CookieEntry = ReturnType<AstroCookies["get"]>;
+
+function resolveSupabaseAccessToken(cookies: AstroCookies, headers: Headers) {
   const staticCandidates = ["sb-access-token", "sb-access-token-sb"];
 
   for (const candidate of staticCandidates) {
@@ -65,15 +89,53 @@ function resolveSupabaseAccessToken(cookies: AstroCookies) {
     }
   }
 
-  const dynamicCookie = cookies
-    .getAll()
-    .find((entry) => entry.name.startsWith("sb-") && entry.name.endsWith("-access-token"));
+  const dynamicCookie = getAllCookies(cookies, headers).find(
+    (entry) => entry.name.startsWith("sb-") && entry.name.endsWith("-access-token"),
+  );
 
   if (dynamicCookie?.value) {
     return dynamicCookie;
   }
 
   return null;
+}
+
+function getAllCookies(cookies: AstroCookies, headers: Headers): CookieEntry[] {
+  const maybeGetAll = (cookies as unknown as { getAll?: () => CookieEntry[] | undefined }).getAll;
+  if (typeof maybeGetAll === "function") {
+    const result = maybeGetAll.call(cookies);
+    if (Array.isArray(result)) {
+      return result;
+    }
+  }
+
+  const rawCookie = headers.get("cookie");
+  if (!rawCookie) {
+    return [];
+  }
+
+  return rawCookie
+    .split(";")
+    .map((chunk) => {
+      const [name, ...rest] = chunk.split("=");
+      if (!name) {
+        return null;
+      }
+
+      const value = rest.join("=");
+      let decoded = value?.trim() ?? "";
+      try {
+        decoded = decodeURIComponent(decoded);
+      } catch {
+        // leave as-is if decoding fails
+      }
+
+      return {
+        name: name.trim(),
+        value: decoded,
+      } as CookieEntry;
+    })
+    .filter((entry): entry is CookieEntry => Boolean(entry?.name));
 }
 
 function ensureClientReadableCookie(name: string, value: string, cookies: AstroCookies) {
@@ -124,7 +186,7 @@ function parseIntegerEnv(value: unknown, fallback: number): number {
   return fallback;
 }
 
-const prefetch = await prefetchProfile(Astro.cookies);
+const prefetch = await prefetchProfile(Astro.cookies, Astro.request.headers, Astro.locals.supabase ?? null);
 
 if (prefetch.status === 401 || prefetch.status === 403) {
   return Astro.redirect(buildLoginRedirect(Astro.url.pathname));

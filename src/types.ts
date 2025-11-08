@@ -227,8 +227,8 @@ export interface UploadConstraints {
 
 export const PERSONA_UPLOAD_CONSTRAINTS: UploadConstraints = {
   allowedMimeTypes: ["image/jpeg", "image/png"],
-  minWidth: 1024,
-  minHeight: 1024,
+  minWidth: 512,
+  minHeight: 512,
   maxBytes: 15 * 1024 * 1024,
   retentionHours: 72,
 };

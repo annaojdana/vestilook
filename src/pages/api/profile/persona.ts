@@ -23,8 +23,8 @@ const PERSONA_BUCKET = import.meta.env.PRIVATE_VTON_PERSONA_BUCKET ?? 'vestilook
 const CACHE_CONTROL_HEADER = 'private, max-age=0, must-revalidate';
 
 const ALLOWED_MIME_TYPES = new Set(['image/jpeg', 'image/png']);
-const MIN_WIDTH = 1024;
-const MIN_HEIGHT = 1024;
+const MIN_WIDTH = 512;
+const MIN_HEIGHT = 512;
 const MAX_BYTES = 15 * 1024 * 1024;
 
 interface ErrorBody {

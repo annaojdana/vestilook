@@ -21,6 +21,10 @@ const PUBLIC_API_PATHS = [
   '/api/auth/login',
   '/api/auth/register',
   '/api/auth/reset-password',
+  '/api/profile',
+  '/api/profile/quota',
+  '/api/profile/consent',
+  '/api/profile/persona',
 ];
 
 // Protected paths that require authentication

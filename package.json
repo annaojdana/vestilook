@@ -3,7 +3,7 @@
   "type": "module",
   "version": "0.0.1",
   "scripts": {
-    "dev": "astro dev",
+    "dev": "npx astro dev --hostname 127.0.0.1",
     "dev:e2e": "astro dev --mode test",
     "build": "astro build",
     "preview": "astro preview",

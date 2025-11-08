@@ -63,7 +63,7 @@ Vestilook delivers photorealistic virtual try-on previews by combining a user’
 - `npm run astro` — Run arbitrary Astro CLI commands.
 
 ## 6. Project Scope
-- **In scope (MVP):** Single-persona VTON flow, Supabase-backed storage/auth, high-resolution downloads, client-side upload validation (format, ≥1024×1024), explicit consent gating, cost-limiting per user, automated cleanup of garments/results after 2–3 days.
+- **In scope (MVP):** Single-persona VTON flow, Supabase-backed storage/auth, high-resolution downloads, client-side upload validation (format, ≥512×512), explicit consent gating, cost-limiting per user, automated cleanup of garments/results after 2–3 dni.
 - **Out of scope (MVP):** Multiple personas, store catalog integrations or URL-based uploads, advanced persona editing, alternative AI models, extended GCP auth hardening.
 
 ## 7. Project Status

@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 
-import type { ConsentReceipt, ConsentRequirement } from "@/types.ts";
+import type { ConsentReceipt, ConsentRequirement, ConsentStatusResponseDto } from "@/types.ts";
 import { isAccessTokenError, requireAccessToken } from "./session.ts";
 
 export interface ConsentRequestError {
@@ -81,10 +81,36 @@ export function useConsentRequirement(
       }
 
       if (response.status === 409) {
+        const refreshed = await fetchConsentSnapshot(accessToken);
+        if (refreshed && refreshed.isCompliant && refreshed.requiredVersion === consent.requiredVersion) {
+          const receipt: ConsentReceipt = {
+            acceptedVersion: refreshed.acceptedVersion ?? refreshed.requiredVersion,
+            acceptedAt: refreshed.acceptedAt ?? new Date().toISOString(),
+            expiresAt: null,
+          };
+          setConsent(refreshed);
+          onResolved?.(receipt);
+          return receipt;
+        }
+
+        const conflictPayload = await parseErrorBody(response);
+        if (conflictPayload?.details?.requiredVersion) {
+          const requiredVersion = String(conflictPayload.details.requiredVersion);
+          setConsent((current) => ({
+            ...current,
+            requiredVersion,
+            isCompliant: false,
+          }));
+        }
+
         throw <ConsentRequestError>{
           code: "conflict",
           status: response.status,
-          message: "Twoja zgoda została już zaktualizowana. Odśwież widok.",
+          message:
+            (typeof conflictPayload?.error === "string" && conflictPayload.error.length > 0
+              ? conflictPayload.error
+              : "Pojawiła się nowa wersja zgody. Odśwież widok."),
+          details: conflictPayload?.details,
         };
       }
 
@@ -205,4 +231,42 @@ function mapError(error: unknown): ConsentRequestError {
 
 function isConsentRequestError(error: unknown): error is ConsentRequestError {
   return Boolean(error && typeof error === "object" && "code" in error && "message" in error);
+}
+
+async function fetchConsentSnapshot(accessToken: string): Promise<ConsentRequirement | null> {
+  try {
+    const response = await fetch(CONSENT_ENDPOINT, {
+      method: "GET",
+      headers: {
+        Authorization: `Bearer ${accessToken}`,
+      },
+      credentials: "include",
+    });
+
+    if (!response.ok) {
+      return null;
+    }
+
+    const snapshot = (await response.json()) as ConsentStatusResponseDto;
+    if (!snapshot?.requiredVersion) {
+      return null;
+    }
+
+    return {
+      requiredVersion: snapshot.requiredVersion,
+      acceptedVersion: snapshot.acceptedVersion ?? null,
+      acceptedAt: snapshot.acceptedAt ?? null,
+      isCompliant: Boolean(snapshot.isCompliant),
+    };
+  } catch {
+    return null;
+  }
+}
+
+async function parseErrorBody(response: Response): Promise<any> {
+  try {
+    return await response.json();
+  } catch {
+    return null;
+  }
 }

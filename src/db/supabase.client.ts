@@ -1,61 +1,62 @@
-import type { AstroCookies } from 'astro';
-import { createClient } from '@supabase/supabase-js';
+import type { AstroCookies } from "astro";
+import { createClient } from "@supabase/supabase-js";
 
-import type { Database } from './database.types';
+import type { Database } from "./database.types";
 
-const supabaseUrl = import.meta.env.SUPABASE_URL;
-const supabaseAnonKey = import.meta.env.SUPABASE_KEY;
+const resolvedSupabaseUrl = import.meta.env.PUBLIC_SUPABASE_URL ?? import.meta.env.SUPABASE_URL;
+if (!resolvedSupabaseUrl) {
+  throw new Error("Brak konfiguracji SUPABASE_URL/PUBLIC_SUPABASE_URL. Uzupełnij zmienne środowiskowe.");
+}
 
-// Client-side Supabase client for React components
-// Uses localStorage for session persistence
+const resolvedSupabaseKey = import.meta.env.PUBLIC_SUPABASE_ANON_KEY ?? import.meta.env.SUPABASE_KEY;
+if (!resolvedSupabaseKey) {
+  throw new Error("Brak konfiguracji SUPABASE_KEY/PUBLIC_SUPABASE_ANON_KEY. Uzupełnij zmienne środowiskowe.");
+}
+
+const supabaseUrl = resolvedSupabaseUrl;
+const supabaseAnonKey = resolvedSupabaseKey;
+
+const isSecureEnvironment =
+  Boolean(import.meta.env?.PROD) || (typeof process !== "undefined" && process.env.NODE_ENV === "production");
+
 export const supabaseClient = createClient<Database>(supabaseUrl, supabaseAnonKey, {
   auth: {
-    persistSession: true, // Persist session in localStorage (client-side only)
-    autoRefreshToken: true, // Auto-refresh tokens
-    detectSessionInUrl: true, // Detect session in URL (for magic links)
+    persistSession: true,
+    autoRefreshToken: true,
+    detectSessionInUrl: true,
   },
 });
 
-// Cookie options for server-side session management
 export const cookieOptions = {
-  path: '/',
-  secure: true,
+  path: "/",
+  secure: isSecureEnvironment,
   httpOnly: true,
-  sameSite: 'lax' as const,
+  sameSite: "lax" as const,
 };
 
-// Parse cookie header into array of {name, value} objects
 function parseCookieHeader(cookieHeader: string): { name: string; value: string }[] {
-  if (!cookieHeader) return [];
+  if (!cookieHeader) {
+    return [];
+  }
 
-  return cookieHeader.split(';').map((cookie) => {
-    const [name, ...rest] = cookie.trim().split('=');
-    return { name, value: rest.join('=') };
+  return cookieHeader.split(";").map((cookie) => {
+    const [name, ...rest] = cookie.trim().split("=");
+    return { name, value: rest.join("=") };
   });
 }
 
-/**
- * Server-side Supabase client factory for Astro pages/middleware
- * IMPORTANT: Uses getAll/setAll pattern for cookie management as per security best practices
- * NEVER use individual get/set/remove methods
- */
-export function createSupabaseServerClient(context: {
-  headers: Headers;
-  cookies: AstroCookies;
-}) {
+export function createSupabaseServerClient(context: { headers: Headers; cookies: AstroCookies }) {
   return createClient<Database>(supabaseUrl, supabaseAnonKey, {
     auth: {
-      persistSession: false, // Don't use localStorage on server
+      persistSession: false,
       autoRefreshToken: false,
       detectSessionInUrl: false,
-      flowType: 'pkce',
+      flowType: "pkce",
     },
     cookies: {
-      // IMPORTANT: Use getAll pattern - returns all cookies at once
       getAll() {
-        return parseCookieHeader(context.headers.get('Cookie') ?? '');
+        return parseCookieHeader(context.headers.get("Cookie") ?? "");
       },
-      // IMPORTANT: Use setAll pattern - sets multiple cookies at once
       setAll(cookiesToSet) {
         cookiesToSet.forEach(({ name, value, options }) => {
           context.cookies.set(name, value, {

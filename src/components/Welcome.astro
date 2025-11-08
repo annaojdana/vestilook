@@ -1,15 +1,14 @@
 ---
-interface FeatureStatProps {
+interface FeatureStat {
   value: string;
   label: string;
 }
 
-const FeatureStat = ({ value, label }: FeatureStatProps) => (
-  <div class="bg-white/10 border border-white/15 rounded-xl p-5 text-center backdrop-blur-md">
-    <p class="text-3xl font-bold text-blue-200">{value}</p>
-    <p class="text-sm text-blue-100/80 mt-1">{label}</p>
-  </div>
-);
+const FEATURE_STATS: FeatureStat[] = [
+  { value: "98%", label: "dokładność konturu sylwetki" },
+  { value: "< 30s", label: "średni czas generacji stylizacji" },
+  { value: "24–72h", label: "kontrolowana retencja wyników" },
+];
 ---
 
 <div class="relative w-full mx-auto min-h-screen bg-gradient-to-br from-indigo-900 via-purple-900 to-blue-900 p-4 sm:p-8">
@@ -69,9 +68,14 @@ const FeatureStat = ({ value, label }: FeatureStatProps) => (
       </div>
 
       <div class="grid gap-6 md:grid-cols-3 max-w-4xl mx-auto mt-4">
-        <FeatureStat value="98%" label="dokładność konturu sylwetki" />
-        <FeatureStat value="< 30s" label="średni czas generacji stylizacji" />
-        <FeatureStat value="24–72h" label="kontrolowana retencja wyników" />
+        {
+          FEATURE_STATS.map(({ value, label }) => (
+            <div class="bg-white/10 border border-white/15 rounded-xl p-5 text-center backdrop-blur-md" aria-live="polite" key={value}>
+              <p class="text-3xl font-bold text-blue-200">{value}</p>
+              <p class="text-sm text-blue-100/80 mt-1">{label}</p>
+            </div>
+          ))
+        }
       </div>
 
       <p class="text-lg text-center text-blue-100/90 mt-8 leading-relaxed">

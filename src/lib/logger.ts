@@ -1,5 +1,3 @@
-import { randomUUID } from 'node:crypto';
-
 type LogLevel = 'debug' | 'info' | 'warn' | 'error';
 
 const LEVEL_PRIORITY: Record<LogLevel, number> = {
@@ -44,8 +42,9 @@ function resolveLevel(level?: LogLevel): LogLevel {
     typeof import.meta.env.PRIVATE_LOG_LEVEL === 'string'
       ? import.meta.env.PRIVATE_LOG_LEVEL
       : undefined) ??
-    process.env.PRIVATE_LOG_LEVEL ??
-    process.env.LOG_LEVEL;
+    (typeof process !== 'undefined' && typeof process.env !== 'undefined'
+      ? process.env.PRIVATE_LOG_LEVEL ?? process.env.LOG_LEVEL
+      : undefined);
 
   const candidate = level ?? envLevel ?? 'info';
   return isLogLevel(candidate) ? candidate : 'info';
@@ -72,6 +71,28 @@ function serializeContext(context: LoggerContext): Record<string, unknown> {
     acc[key] = value;
     return acc;
   }, {});
+}
+
+function generateRequestId(): string {
+  if (typeof globalThis !== 'undefined') {
+    const cryptoApi = globalThis.crypto as Crypto | undefined;
+    if (cryptoApi?.randomUUID) {
+      return cryptoApi.randomUUID();
+    }
+
+    if (cryptoApi?.getRandomValues) {
+      const buffer = new Uint8Array(16);
+      cryptoApi.getRandomValues(buffer);
+      buffer[6] = (buffer[6] & 0x0f) | 0x40;
+      buffer[8] = (buffer[8] & 0x3f) | 0x80;
+      const hex = [...buffer].map((b) => b.toString(16).padStart(2, '0'));
+      return `${hex.slice(0, 4).join('')}-${hex.slice(4, 6).join('')}-${hex.slice(6, 8).join('')}-${hex
+        .slice(8, 10)
+        .join('')}-${hex.slice(10).join('')}`;
+    }
+  }
+
+  return `fallback-${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 10)}`;
 }
 
 function write(
@@ -110,7 +131,7 @@ export function createLogger(options: LoggerOptions = {}): Logger {
       context: mergeContext(baseContext, context),
     });
 
-  const withRequest = (requestId = randomUUID()): Logger => child({ requestId });
+  const withRequest = (requestId = generateRequestId()): Logger => child({ requestId });
 
   return {
     level,

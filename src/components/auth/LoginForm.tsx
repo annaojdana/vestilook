@@ -1,9 +1,15 @@
-import { type FC, useState } from "react";
+import { useMemo, useState } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
 
+import { toast } from "sonner";
+import type { Session } from "@supabase/supabase-js";
+
+import { supabaseClient } from "@/db/supabase.client.ts";
+import { mapSupabaseAuthError } from "@/lib/auth-errors.ts";
 import { Button } from "@/components/ui/button";
+import { clientLogger } from "@/lib/client-logger.ts";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -30,6 +36,7 @@ export function LoginForm({ redirectTo = '/onboarding/consent', errorMessage, in
       ? 'Sprawdź swoją skrzynkę email i kliknij w link aktywacyjny, aby potwierdzić konto.'
       : null
   );
+  const logger = useMemo(() => clientLogger.child({ component: "LoginForm" }), []);
 
   const {
     register,
@@ -39,9 +46,34 @@ export function LoginForm({ redirectTo = '/onboarding/consent', errorMessage, in
     resolver: zodResolver(loginSchema),
   });
 
+  const syncServerSession = async (session: Session) => {
+    try {
+      await fetch("/api/auth/set-session", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        credentials: "include",
+        body: JSON.stringify({
+          event: "SIGNED_IN",
+          session: {
+            access_token: session?.access_token,
+            refresh_token: session?.refresh_token,
+          },
+        }),
+      });
+    } catch (error) {
+      logger.warn("Failed to sync session cookies", {
+        message: error instanceof Error ? error.message : String(error),
+      });
+    }
+  };
+
   const onSubmit = async (values: LoginFormValues) => {
     setIsSubmitting(true);
     setError(null);
+    const emailDomain = values.email.split("@")[1] ?? "unknown";
+    logger.debug("Submitting login request", { redirectTo, emailDomain });
 
     try {
       const { data, error: authError } = await supabaseClient.auth.signInWithPassword({
@@ -50,17 +82,33 @@ export function LoginForm({ redirectTo = '/onboarding/consent', errorMessage, in
       });
 
       if (authError) {
+        logger.warn("Supabase rejected login attempt", {
+          status: authError.status ?? null,
+          code: authError.name ?? "unknown",
+        });
         setError(mapSupabaseAuthError(authError));
         setIsSubmitting(false);
         return;
       }
 
       if (data?.session) {
+        await syncServerSession(data.session);
+        logger.info("Login successful, redirecting user", {
+          redirectTo,
+          userId: data.session.user?.id,
+        });
         toast.success('Zalogowano pomyślnie');
         window.location.href = redirectTo;
+        return;
       }
+
+      logger.error("Supabase returned empty session payload", { redirectTo });
+      setError('Nie udało się nawiązać sesji użytkownika. Spróbuj ponownie.');
+      setIsSubmitting(false);
     } catch (err) {
-      console.error('Login error:', err);
+      logger.error('Login request failed', {
+        message: err instanceof Error ? err.message : String(err),
+      });
       setError('Wystąpił problem z połączeniem. Spróbuj ponownie.');
       setIsSubmitting(false);
     }

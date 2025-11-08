@@ -4,6 +4,7 @@ interface FeatureStat {
   label: string;
 }
 
+const currentYear = new Date().getFullYear();
 const FEATURE_STATS: FeatureStat[] = [
   { value: "98%", label: "dokładność konturu sylwetki" },
   { value: "< 30s", label: "średni czas generacji stylizacji" },
@@ -82,6 +83,18 @@ const FEATURE_STATS: FeatureStat[] = [
         Budujemy cyfrową przymierzalnię, która zwiększa konwersję e-commerce i ogranicza zwroty. Dołącz do beta-testów,
         aby jako pierwszy oferować klientom wirtualne stylizacje.
       </p>
+
+      <footer data-site-footer="true" class="mt-12 flex flex-col gap-2 border-t border-white/15 pt-6 text-center text-sm text-blue-100/70 sm:flex-row sm:items-center sm:justify-between">
+        <span>© {currentYear} Vestilook. Wszystkie prawa zastrzeżone.</span>
+        <div class="flex flex-wrap justify-center gap-4">
+          <a href="/legal/polityka-przetwarzania-wizerunku" class="underline-offset-4 hover:underline">
+            Polityka przetwarzania wizerunku
+          </a>
+          <a href="mailto:team@vestilook.com" class="underline-offset-4 hover:underline">
+            team@vestilook.com
+          </a>
+        </div>
+      </footer>
     </div>
   </div>
 </div>

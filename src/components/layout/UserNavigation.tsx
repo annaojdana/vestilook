@@ -1,15 +1,11 @@
-import { useState } from 'react';
-import type { FC } from 'react';
-import { LogoutButton } from '@/components/auth/LogoutButton';
-import { Avatar, AvatarFallback } from '@/components/ui/avatar';
-import {
-  Sheet,
-  SheetContent,
-  SheetHeader,
-  SheetTitle,
-  SheetTrigger,
-} from '@/components/ui/sheet';
-import { Button } from '@/components/ui/button';
+import { useEffect, useState } from "react";
+import type { FC } from "react";
+import { LogoutButton } from "@/components/auth/LogoutButton";
+import { Avatar, AvatarFallback } from "@/components/ui/avatar";
+import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger } from "@/components/ui/sheet";
+import { Button } from "@/components/ui/button";
+import { getUserInitials } from "@/lib/user-profile";
+import { USER_NAVIGATION_SHEET_EVENT, type NavigationOverlayEventDetail } from "@/components/layout/navigationEvents";
 
 interface UserNavigationProps {
   userEmail: string;
@@ -18,11 +14,18 @@ interface UserNavigationProps {
 export const UserNavigation: FC<UserNavigationProps> = ({ userEmail }) => {
   const [isOpen, setIsOpen] = useState(false);
 
-  // Get initials from email for avatar
-  const getInitials = (email: string) => {
-    const username = email.split('@')[0];
-    return username.slice(0, 2).toUpperCase();
-  };
+  useEffect(() => {
+    if (typeof window === "undefined") {
+      return;
+    }
+
+    const detail: NavigationOverlayEventDetail = {
+      open: isOpen,
+      source: "user-navigation",
+    };
+
+    window.dispatchEvent(new CustomEvent(USER_NAVIGATION_SHEET_EVENT, { detail }));
+  }, [isOpen]);
 
   return (
     <div className="flex items-center gap-4">
@@ -34,7 +37,7 @@ export const UserNavigation: FC<UserNavigationProps> = ({ userEmail }) => {
           >
             <Avatar className="h-8 w-8">
               <AvatarFallback className="bg-gradient-to-br from-purple-500 to-pink-500 text-white text-xs">
-                {getInitials(userEmail)}
+                {getUserInitials(userEmail)}
               </AvatarFallback>
             </Avatar>
             <span className="hidden md:inline text-sm font-medium">
@@ -50,7 +53,7 @@ export const UserNavigation: FC<UserNavigationProps> = ({ userEmail }) => {
             <div className="flex items-center gap-3 pb-4 border-b">
               <Avatar className="h-12 w-12">
                 <AvatarFallback className="bg-gradient-to-br from-purple-500 to-pink-500 text-white">
-                  {getInitials(userEmail)}
+                  {getUserInitials(userEmail)}
                 </AvatarFallback>
               </Avatar>
               <div className="flex-1 min-w-0">

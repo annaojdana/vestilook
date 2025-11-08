@@ -12,6 +12,7 @@
 - [7. Project Status](#7-project-status)
 - [8. License](#8-license)
 - [9. Mobile Responsiveness Testing](#9-mobile-responsiveness-testing)
+- [10. Navigation & Layout](#10-navigation--layout)
 
 ## 1. Project Name
 Vestilook — AI-powered virtual try-on experience.
@@ -80,3 +81,9 @@ Playwright ma teraz prekonfigurowane profile urządzeń, które odpalają pełny
 - `npx playwright test --project="mobile-safari"` – symuluje iPhone 14 Pro (Mobile Safari).
 
 Możesz również uruchomić interaktywne UI testów z tym samym parametrem (`npx playwright test --ui --project="mobile-chrome"`) i obserwować layout wbudowanym emulatorem Playwright.
+
+## 10. Navigation & Layout
+- `<Layout.astro>` renderuje teraz pasek `MobileNavigation` dokowany do dolnej krawędzi viewportu dla widoków `< md`, zapewniając szybkie linki do `/dashboard`, `/generations`, `/profile` oraz centralne CTA „Nowa stylizacja”.
+- Component `MobileNavigation` korzysta z shadcn/ui (`Sheet`, `Button`, `Avatar`) i współdzieli kontekst sesji Supabase, emitując zdarzenia synchronizujące stan z `UserNavigation`, aby panel konta miał priorytet.
+- Główne `<main>` dostaje responsywny padding (`pb-24 md:pb-0`), aby treść nie była zasłaniana przez pasek mobilny; dla ekranów `md+` layout pozostał bez zmian.
+- Marketingowe stopki renderowane w slocie layoutu należy oznaczać atrybutem `data-site-footer="true"`, dzięki czemu są automatycznie ukrywane na urządzeniach mobilnych (pasek nawigacyjny zastępuje ich funkcję).

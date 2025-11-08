@@ -1,6 +1,7 @@
 ---
 import "../styles/global.css";
 import { UserNavigation } from "@/components/layout/UserNavigation";
+import { MobileNavigation } from "@/components/layout/MobileNavigation";
 import { Toaster } from "@/components/ui/sonner";
 
 interface Props {
@@ -12,6 +13,7 @@ const { title = "Vestilook", showNavigation = true } = Astro.props;
 
 // Get user from middleware (Astro.locals.user is set by auth middleware)
 const user = Astro.locals.user;
+const activePath = Astro.url.pathname;
 ---
 
 <!doctype html>
@@ -63,9 +65,13 @@ const user = Astro.locals.user;
       </header>
     )}
 
-    <main>
+    <main class:list={{ "min-h-screen": true, "pb-24 md:pb-0": showNavigation && user }}>
       <slot />
     </main>
+
+    {showNavigation && user && (
+      <MobileNavigation client:load activePath={activePath} userEmail={user.email ?? ""} />
+    )}
 
     <Toaster client:load />
   </body>
@@ -82,5 +88,11 @@ const user = Astro.locals.user;
   .container {
     max-width: 1280px;
     margin: 0 auto;
+  }
+
+  @media (max-width: 767px) {
+    main :global(footer[data-site-footer="true"]) {
+      display: none !important;
+    }
   }
 </style>

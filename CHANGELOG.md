@@ -5,6 +5,8 @@ All notable changes to this project will be documented in this file.
 ## [Unreleased]
 
 ### Added
+- Pasek `MobileNavigation` dokowany do dolnej krawędzi, renderowany w `Layout.astro` dla ekranów `< md`, z linkami do dashboardu/generacji/profilu, CTA „Nowa stylizacja” oraz integracją z `UserNavigation`.
+- Wspólny kanał zdarzeń (`layout:user-navigation-sheet`, `layout:mobile-navigation-panel`) i wsparcie dla ukrywania marketingowych stopek oznaczonych `data-site-footer="true"` w trybie mobilnym.
 - Widok `/generations/new` renderujący formularz generacji z obsługą limitów, retencji i ponownej zgody.
 - Komponenty UI: `GarmentUploadField`, `ConsentReaffirmation`, `QuotaIndicator`, `RetentionSelector`, `FormAlerts`, `GeneratePrimaryButton` wraz z modułami walidacji (`useGarmentValidation`) i orchestracją wysyłki (`useGenerationSubmission`).
 - Zestaw testów Vitest obejmujący walidację plików, orchestrację żądań VTON oraz integracyjny scenariusz `GenerationForm`.

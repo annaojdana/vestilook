@@ -1,6 +1,16 @@
-import { useCallback, useRef, useState, type ChangeEvent, type DragEvent, type KeyboardEvent, type FC } from "react";
+import {
+  useCallback,
+  useId,
+  useRef,
+  useState,
+  type ChangeEvent,
+  type DragEvent,
+  type KeyboardEvent,
+  type FC,
+} from "react";
 import { UploadCloudIcon } from "lucide-react";
 
+import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 
 import type { PersonaValidationError } from "@/types.ts";
@@ -16,6 +26,8 @@ const ACCEPT_MIME = "image/png,image/jpeg";
 const FileDropzone: FC<FileDropzoneProps> = ({ busy, onFileAccepted, onRejected }) => {
   const inputRef = useRef<HTMLInputElement>(null);
   const [isDragging, setIsDragging] = useState(false);
+  const instructionsId = useId();
+  const helperId = useId();
 
   const resetInput = () => {
     const input = inputRef.current;
@@ -160,6 +172,8 @@ const FileDropzone: FC<FileDropzoneProps> = ({ busy, onFileAccepted, onRejected 
       role="button"
       tabIndex={busy ? -1 : 0}
       aria-disabled={busy}
+      aria-label="Dodaj zdjęcie persony"
+      aria-describedby={`${instructionsId} ${helperId}`}
       onClick={handleOpenFileDialog}
       onKeyDown={handleKeyDown}
       onDragOver={handleDragOver}
@@ -183,15 +197,25 @@ const FileDropzone: FC<FileDropzoneProps> = ({ busy, onFileAccepted, onRejected 
       <div className="flex size-14 items-center justify-center rounded-full bg-primary/10 text-primary">
         <UploadCloudIcon className="size-7" aria-hidden="true" />
       </div>
-      <div className="space-y-1 text-sm">
+      <div id={instructionsId} className="space-y-1 text-sm">
         <p className="font-medium text-foreground">Przeciągnij i upuść plik JPEG lub PNG</p>
-        <p className="text-muted-foreground">
-          lub <span className="font-semibold text-primary">kliknij tutaj</span>, aby wybrać plik z dysku.
-        </p>
+        <p className="text-muted-foreground">lub użyj przycisku poniżej, aby wskazać plik z dysku.</p>
       </div>
-      <p className="text-xs text-muted-foreground/80">
+      <p id={helperId} className="text-xs text-muted-foreground/80">
         Minimalna rozdzielczość {">="} 1024×1024. Upewnij się, że twarz i sylwetka są w pełni widoczne.
       </p>
+      <Button
+        type="button"
+        variant="secondary"
+        disabled={busy}
+        onClick={(event) => {
+          event.stopPropagation();
+          handleOpenFileDialog();
+        }}
+        className="mt-3 w-full min-h-11 sm:w-auto"
+      >
+        Wybierz plik z urządzenia
+      </Button>
     </div>
   );
 };

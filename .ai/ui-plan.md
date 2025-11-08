@@ -15,7 +15,7 @@ Cel: umożliwienie pierwszego uploadu Persony bazowej zgodnie z wymaganiami jako
 Kluczowe informacje: preview obrazu, weryfikacja rozdzielczości i formatu, status uploadu, reguły bezpieczeństwa i TTL dla zasobów.  
 Kluczowe komponenty widoku: `PersonaUploader`, `UploadGuidelines`, `ProgressToast`.  
 Interakcje API: `PUT /api/profile/persona`, on demand `POST /api/profile/consent` gdy sesja wygasła.  
-UX, dostępność i względy bezpieczeństwa: drag-and-drop obsługujący klawiaturę, aria-describedby dla komunikatów o błędach, natychmiastowa walidacja rozmiaru i typu oraz maskowanie metadanych przed wysłaniem.
+UX, dostępność i względy bezpieczeństwa: drag-and-drop obsługujący klawiaturę, aria-describedby dla komunikatów o błędach, natychmiastowa walidacja rozmiaru i typu oraz maskowanie metadanych przed wysłaniem. Dropzone zapewnia równoważny przycisk „Wybierz plik”, komunikat dla użytkowników mobilnych i zachowuje focus styles; stały footer korzysta z `env(safe-area-inset-bottom)` aby CTA były w zasięgu kciuka.
 
 **Dashboard & Profil** (`/dashboard`)  
 Cel: centralny przegląd stanu konta oraz zarządzanie Personą i zgodami (FR-003, FR-007, FR-010, US-004).  
@@ -43,14 +43,14 @@ Cel: prezentacja wygenerowanego obrazu, pobieranie i rating (FR-002, FR-009, US-
 Kluczowe informacje: duży preview, meta (data generacji, expiresAt, rozdzielczość), rating, historia działań, komunikat o wygasaniu.  
 Kluczowe komponenty widoku: `ResultPreview`, `DownloadButton`, `RatingStars`, `ExpiryBanner`.  
 Interakcje API: `GET /api/vton/generations/{id}`, `GET /api/vton/generations/{id}/download`, `POST /api/vton/generations/{id}/rating`.  
-UX, dostępność i względy bezpieczeństwa: obsługa gestów i klawiatury, podpisy alternatywne obrazu, ostrzeżenie aria-live na 1h przed TTL, automatyczne wygaszanie przycisku pobierania po `410 Gone`.
+UX, dostępność i względy bezpieczeństwa: obsługa gestów i klawiatury, podpisy alternatywne obrazu, ostrzeżenie aria-live na 1h przed TTL, automatyczne wygaszanie przycisku pobierania po `410 Gone`. Komponent oceny jest implementowany jako `radiogroup` z co najmniej 44px targetem i pełną obsługą klawiatury (strzałki/Home/End) oraz aria-live z komunikatem o aktualnym ratingu.
 
 **Historia generacji** (`/generations/history`)  
 Cel: umożliwienie przeglądania, filtrowania i zarządzania wygenerowanymi wynikami (FR-006, US-005, US-008, US-009, US-010).  
 Kluczowe informacje: lista wpisów ze statusem, oceną, TTL countdown, filtr statusem i datą, akcje pobierz/otwórz/usuń.  
 Kluczowe komponenty widoku: `HistoryList`, `FilterToolbar`, `InlineRating`, `TTLWarningBadge`.  
 Interakcje API: `GET /api/vton/generations`, `GET /api/vton/generations/{id}/download`, `POST /api/vton/generations/{id}/rating`, `DELETE /api/vton/generations/{id}`.  
-UX, dostępność i względy bezpieczeństwa: semantyczna tabela/lista dostępna z klawiatury, widoczne ostrzeżenia o wygasaniu i statusie `expired`, potwierdzenia przed usunięciem oraz paginacja bez przeładowań.
+UX, dostępność i względy bezpieczeństwa: semantyczna lista `<ul>/<li>` adaptująca się do kart mobilnych i układu kolumnowego na desktopie, `FilterToolbar` z `aria-pressed` dla statusów i polami `type="date"` działającymi na screen readerach, komponent `InlineRating` jako radiogroup, `TTLWarningBadge` z żywym countdownem (`aria-live`) i ostrzeżeniami o wygasaniu oraz `PaginationControls` będące nawigacją (`role="navigation"`) z opisanymi przyciskami poprzedni/następny; potwierdzenia przed usunięciem oraz paginacja bez przeładowań.
 
 **Globalny strażnik polityki i sesji** (`/` + route guards)  
 Cel: egzekwowanie logowania Supabase, kompletności profilu oraz wymuszonej ponownej zgody przy nowych wersjach (US-001 oraz nierozwiązana kwestia aktualizacji zgody).  

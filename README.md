@@ -11,6 +11,7 @@
 - [6. Project Scope](#6-project-scope)
 - [7. Project Status](#7-project-status)
 - [8. License](#8-license)
+- [9. Mobile Responsiveness Testing](#9-mobile-responsiveness-testing)
 
 ## 1. Project Name
 Vestilook — AI-powered virtual try-on experience.
@@ -71,3 +72,11 @@ MVP planning in progress with a six-week timeline. Na etapie frontendu wdrożono
 
 ## 8. License
 License to be determined. No license file is currently included in the repository.
+
+## 9. Mobile Responsiveness Testing
+Playwright ma teraz prekonfigurowane profile urządzeń, które odpalają pełny e2e suite w trybie mobilnym. To szybki sposób na wykrycie regresji layoutu na głównych klasach urządzeń:
+
+- `npx playwright test --project="mobile-chrome"` – symuluje Google Pixel 7 (Chrome/Android).
+- `npx playwright test --project="mobile-safari"` – symuluje iPhone 14 Pro (Mobile Safari).
+
+Możesz również uruchomić interaktywne UI testów z tym samym parametrem (`npx playwright test --ui --project="mobile-chrome"`) i obserwować layout wbudowanym emulatorem Playwright.

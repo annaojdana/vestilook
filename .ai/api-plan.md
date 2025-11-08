@@ -229,8 +229,8 @@
     - `status` (enum, optional, multiple) – filter by job state
     - `from` (ISO timestamp, optional) – created_at lower bound
     - `to` (ISO timestamp, optional) – created_at upper bound
-    - `limit` (int, optional, default 20, max 100)
-    - `cursor` (string, optional) – pagination cursor from previous response
+    - `limit` (int, optional, default 20, max 50)
+    - `cursor` (ISO timestamp string, optional) – pass the `nextCursor` value from the previous page
   - Request Body: None
   - Response Body:
     ```json
@@ -247,7 +247,7 @@
           "expiresAt": "2024-03-14T10:30:00Z"
         }
       ],
-      "nextCursor": "eyJpZCI6IjJhIn0="
+      "nextCursor": "2024-03-12T09:55:00Z"
     }
     ```
   - Success: `200 OK`

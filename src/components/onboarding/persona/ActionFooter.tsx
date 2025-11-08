@@ -24,7 +24,7 @@ const ActionFooter: FC<ActionFooterProps> = ({
   return (
     <footer
       className={cn(
-        "flex flex-col gap-4 rounded-2xl border border-border/70 bg-background/80 p-4 shadow-[0_-12px_35px_-24px_rgb(15_23_42/0.35)] backdrop-blur-sm sm:flex-row sm:items-center sm:justify-between",
+        "flex flex-col gap-4 rounded-2xl border border-border/70 bg-background/80 p-4 pb-[calc(1rem+env(safe-area-inset-bottom))] shadow-[0_-12px_35px_-24px_rgb(15_23_42/0.35)] backdrop-blur-sm sm:flex-row sm:items-center sm:justify-between sm:pb-4",
         className
       )}
     >
@@ -46,7 +46,7 @@ const ActionFooter: FC<ActionFooterProps> = ({
             {supportLabel}
           </a>
         ) : null}
-        <Button type="button" onClick={onContinue} disabled={disabled} className="min-w-[11rem]">
+        <Button type="button" onClick={onContinue} disabled={disabled} className="min-h-11 min-w-[11rem]">
           Przejdź dalej
           <ArrowRightIcon className="ml-2 size-4" aria-hidden="true" />
         </Button>

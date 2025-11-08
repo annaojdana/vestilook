@@ -28,7 +28,7 @@ const PrimaryActionBar: FC<PrimaryActionBarProps> = ({
   return (
     <footer
       className={cn(
-        "sticky bottom-0 z-10 flex flex-col gap-3 border-t border-border/60 bg-card/95 p-4 shadow-[0_-8px_32px_-18px_rgb(30_41_59/0.65)] backdrop-blur-xl sm:flex-row sm:items-center sm:justify-between",
+        "sticky bottom-0 z-10 flex flex-col gap-3 border-t border-border/60 bg-card/95 p-4 pb-[calc(1rem+env(safe-area-inset-bottom))] shadow-[0_-8px_32px_-18px_rgb(30_41_59/0.65)] backdrop-blur-xl sm:flex-row sm:items-center sm:justify-between sm:pb-4",
         className
       )}
     >
@@ -44,7 +44,7 @@ const PrimaryActionBar: FC<PrimaryActionBarProps> = ({
           onClick={primary.onClick}
           disabled={disabled || loading}
           aria-busy={loading}
-          className="min-w-[9rem]"
+          className="min-h-11 min-w-[9rem]"
         >
           {loading ? "Zapisywanie..." : primary.label}
         </Button>

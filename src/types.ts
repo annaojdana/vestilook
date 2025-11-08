@@ -397,3 +397,37 @@ export interface GenerationHistoryFilters {
   limit: number;
   cursor?: string | null;
 }
+
+export type HistoryStatusTone = "default" | "success" | "warning" | "danger";
+
+export interface HistoryActionState {
+  enabled: boolean;
+  busy?: boolean;
+  label?: string;
+}
+
+export interface HistoryActionAvailability {
+  open: HistoryActionState;
+  download: HistoryActionState;
+  delete: HistoryActionState;
+}
+
+export interface GenerationHistoryItemViewModel {
+  id: VtonGenerationRow["id"];
+  title: string;
+  summary: string;
+  status: GenerationStatus;
+  statusLabel: string;
+  statusTone: HistoryStatusTone;
+  createdAtLabel: string;
+  expiresAt?: string | null;
+  expiresAtLabel?: string | null;
+  expiresInLabel?: string | null;
+  expiresSoon?: boolean;
+  thumbnailUrl: string;
+  thumbnailAlt: string;
+  rating: VtonGenerationRow["user_rating"];
+  ratingSubmitting?: boolean;
+  canRate?: boolean;
+  actions: HistoryActionAvailability;
+}

@@ -65,7 +65,7 @@ const loadVtonEnvironmentConfigMock = vi.mocked(loadVtonEnvironmentConfig);
 const { createGeneration, GenerationServiceError } = await import("@/lib/vton/generation.service.ts");
 const createGenerationMock = vi.mocked(createGeneration);
 
-const { POST } = await import("@/pages/api/vton/generations/index.ts");
+const { POST, GET } = await import("@/pages/api/vton/generations/index.ts");
 
 describe("POST /api/vton/generations", () => {
   const supabaseUrl = "https://example.supabase.co";
@@ -318,5 +318,126 @@ describe("POST /api/vton/generations", () => {
     expect(payload).toEqual(queuedResponse);
     expect(cleanupMock).toHaveBeenCalledTimes(1);
     expect(toBlobMock).toHaveBeenCalledTimes(1);
+  });
+});
+
+describe("GET /api/vton/generations", () => {
+  const supabaseUrl = "https://example.supabase.co";
+  const supabaseKey = "test-anon-key";
+
+  beforeEach(() => {
+    vi.clearAllMocks();
+    process.env.SUPABASE_URL = supabaseUrl;
+    process.env.SUPABASE_KEY = supabaseKey;
+    loadVtonEnvironmentConfigMock.mockReturnValue({
+      vertexProjectId: "test-project",
+      vertexLocation: "europe-west1",
+      vertexModel: "virtual-try-on",
+      garmentBucket: "garment-bucket",
+      personaBucket: "persona-bucket",
+      generationBucket: "generation-bucket",
+      defaultEtaSeconds: 180,
+      maxGarmentBytes: 7_340_032,
+      minGarmentWidth: 1024,
+      minGarmentHeight: 1024,
+      allowedGarmentMimeTypes: ["image/png", "image/jpeg"],
+    });
+  });
+
+  it("returns 401 when authorization header is missing", async () => {
+    const request = new Request("http://localhost/api/vton/generations", { method: "GET" });
+    const response = await GET({ request } as any);
+
+    expect(response.status).toBe(401);
+    expect(createClientMock).not.toHaveBeenCalled();
+  });
+
+  it("returns 400 when from filter is invalid", async () => {
+    const request = new Request("http://localhost/api/vton/generations?from=not-a-date", {
+      method: "GET",
+      headers: {
+        Authorization: "Bearer token-123",
+      },
+    });
+
+    const response = await GET({ request } as any);
+
+    expect(response.status).toBe(400);
+    expect(createClientMock).not.toHaveBeenCalled();
+  });
+
+  it("returns paginated results with signed URLs", async () => {
+    const rows = [
+      {
+        id: "gen-1",
+        status: "succeeded",
+        created_at: "2025-01-12T10:00:00.000Z",
+        completed_at: "2025-01-12T10:05:00.000Z",
+        error_reason: null,
+        expires_at: "2025-01-13T10:00:00.000Z",
+        result_path: "results/gen-1.png",
+        user_rating: 4,
+      },
+      {
+        id: "gen-2",
+        status: "failed",
+        created_at: "2025-01-11T09:00:00.000Z",
+        completed_at: "2025-01-11T09:10:00.000Z",
+        error_reason: "vertex_error",
+        expires_at: "2025-01-12T09:00:00.000Z",
+        result_path: "results/gen-2.png",
+        user_rating: null,
+      },
+    ];
+
+    const queryBuilder: any = {
+      select: vi.fn().mockReturnThis(),
+      eq: vi.fn().mockReturnThis(),
+      order: vi.fn().mockReturnThis(),
+      limit: vi.fn().mockResolvedValue({ data: rows, error: null }),
+      gte: vi.fn().mockReturnThis(),
+      lte: vi.fn().mockReturnThis(),
+      lt: vi.fn().mockReturnThis(),
+      in: vi.fn().mockReturnThis(),
+    };
+
+    const createSignedUrlMock = vi
+      .fn()
+      .mockResolvedValueOnce({ data: { signedUrl: "https://signed.example/gen-1.png" }, error: null })
+      .mockResolvedValueOnce({ data: { signedUrl: "https://signed.example/gen-2.png" }, error: null });
+
+    const supabaseInstance = {
+      auth: {
+        getUser: vi.fn().mockResolvedValue({
+          data: { user: { id: "user-123" } },
+          error: null,
+        }),
+      },
+      from: vi.fn().mockReturnValue(queryBuilder),
+      storage: {
+        from: vi.fn().mockReturnValue({
+          createSignedUrl: createSignedUrlMock,
+        }),
+      },
+    };
+
+    createClientMock.mockReturnValue(supabaseInstance as any);
+
+    const request = new Request("http://localhost/api/vton/generations?limit=1", {
+      method: "GET",
+      headers: {
+        Authorization: "Bearer token-123",
+      },
+    });
+
+    const response = await GET({ request } as any);
+
+    expect(response.status).toBe(200);
+    const payload = (await response.json()) as { items: any[]; nextCursor: string | null };
+    expect(payload.items).toHaveLength(1);
+    expect(payload.items[0].thumbnailUrl).toBe("https://signed.example/gen-1.png");
+    expect(payload.nextCursor).toBe("2025-01-11T09:00:00.000Z");
+    expect(queryBuilder.limit).toHaveBeenCalledWith(2);
+    expect(supabaseInstance.storage.from).toHaveBeenCalledWith("generation-bucket");
   });
 });

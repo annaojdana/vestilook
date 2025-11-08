@@ -48,7 +48,7 @@ const OnboardingPersonaShell: FC<OnboardingPersonaShellProps> = ({
 
   const handleUnauthorized = useCallback(() => {
     void supabaseClient.auth.signOut();
-    window.location.replace("/login");
+    window.location.replace("/auth/login");
   }, []);
 
   const consentHarness = useConsentRequirement(viewModel.consent, {

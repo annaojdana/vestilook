@@ -4,7 +4,7 @@ import { createClient } from '@supabase/supabase-js';
 import type { Database } from '../../db/database.types.ts';
 import type { ProfileResponseDto } from '../../types.ts';
 import {
-  getProfile,
+  ensureProfile,
   ProfileForbiddenError,
   ProfileServiceError,
 } from '../../lib/profile-service.ts';
@@ -49,16 +49,8 @@ export const GET: APIRoute = async ({ request }) => {
   }
 
   try {
-    const result = await getProfile(supabase, userData.user.id, logger);
-
-    if (result.status === 'missing') {
-      return new Response(null, {
-        status: 204,
-        headers: { 'Cache-Control': CACHE_CONTROL_HEADER },
-      });
-    }
-
-    const payload = validateProfileResponse(result.profile);
+    const profile = await ensureProfile(supabase, userData.user.id, logger);
+    const payload = validateProfileResponse(profile);
 
     return json(payload, {
       status: 200,
@@ -179,4 +171,3 @@ function createLogger(requestId: string): Logger {
       console.warn('[profile#get]', { message, requestId, ...(context ?? {}) }),
   };
 }
-

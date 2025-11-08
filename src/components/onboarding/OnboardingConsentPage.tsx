@@ -83,7 +83,7 @@ const ConsentPageContent: FC<ConsentPageContentProps> = ({ policyUrl, nextPath }
 
     loginRedirectTriggeredRef.current = true;
     void supabaseClient.auth.signOut();
-    window.location.replace("/login");
+    window.location.replace("/auth/login");
   }, []);
 
   const {

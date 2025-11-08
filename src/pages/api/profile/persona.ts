@@ -7,7 +7,7 @@ import { imageSize } from 'image-size';
 import type { Database } from '../../../db/database.types.ts';
 import type { PersonaAssetWithChecksum, PersonaUploadResponseDto } from '../../../types.ts';
 import {
-  getProfile,
+  ensureProfile,
   ProfileForbiddenError,
   ProfileServiceError,
 } from '../../../lib/profile-service.ts';
@@ -55,12 +55,9 @@ export const PUT: APIRoute = async ({ request }) => {
   const userId = userResult.data.user.id;
 
   try {
-    const profileResult = await getProfile(supabase, userId, logger);
-    if (profileResult.status === 'missing') {
-      return json({ error: 'Profile not initialized.' }, { status: 400 });
-    }
+    const profile = await ensureProfile(supabase, userId, logger);
 
-    if (!profileResult.profile.consent.isCompliant) {
+    if (!profile.consent.isCompliant) {
       return json({ error: 'Consent required.' }, { status: 403 });
     }
 
@@ -135,9 +132,9 @@ export const PUT: APIRoute = async ({ request }) => {
     const responsePayload: PersonaUploadResponseDto = {
       persona: personaAsset,
       consent: {
-        requiredVersion: profileResult.profile.consent.currentVersion,
-        acceptedVersion: profileResult.profile.consent.acceptedVersion,
-        acceptedAt: profileResult.profile.consent.acceptedAt,
+        requiredVersion: profile.consent.currentVersion,
+        acceptedVersion: profile.consent.acceptedVersion,
+        acceptedAt: profile.consent.acceptedAt,
       },
     };
 

@@ -25,7 +25,8 @@ if (!session) {
 }
 
 // Fetch user profile
-const profileResponse = await fetch("/api/profile", {
+const profileUrl = new URL("/api/profile", Astro.url);
+const profileResponse = await fetch(profileUrl, {
   headers: {
     Authorization: `Bearer ${session.access_token}`,
   },
@@ -39,7 +40,8 @@ if (profileResponse.status === 204) {
 const profile: ProfileResponseDto = await profileResponse.json();
 
 // Fetch quota information
-const quotaResponse = await fetch("/api/profile/quota", {
+const quotaUrl = new URL("/api/profile/quota", Astro.url);
+const quotaResponse = await fetch(quotaUrl, {
   headers: {
     Authorization: `Bearer ${session.access_token}`,
   },

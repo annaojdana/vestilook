@@ -10,6 +10,7 @@ All notable changes to this project will be documented in this file.
 - Zestaw testów Vitest obejmujący walidację plików, orchestrację żądań VTON oraz integracyjny scenariusz `GenerationForm`.
 - Dokumentacja PRD/README rozszerzona o wymagania formularza generacji, konfigurację zmiennych środowiskowych i nowe scenariusze E2E.
 - Logger klienta (`src/lib/client-logger.ts`) z przełącznikiem `PUBLIC_ENABLE_CLIENT_LOGS` oraz telemetria w `LoginForm` ułatwiająca debugowanie procesu logowania.
+- Statyczna strona `/legal/polityka-przetwarzania-wizerunku` wykorzystywana przez ekran zgody, zapewniająca domyślną treść regulaminu przetwarzania wizerunku.
 
 ### Changed
 - Zmodernizowany layout `/generations/new` (gradient, responsywne kolumny, tryb dark) dla zwiększenia czytelności i UX.

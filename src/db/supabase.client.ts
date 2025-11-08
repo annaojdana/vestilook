@@ -1,5 +1,6 @@
 import type { AstroCookies } from "astro";
 import { createClient } from "@supabase/supabase-js";
+import { createServerClient } from "@supabase/ssr";
 
 import type { Database } from "./database.types";
 
@@ -46,13 +47,8 @@ function parseCookieHeader(cookieHeader: string): { name: string; value: string 
 }
 
 export function createSupabaseServerClient(context: { headers: Headers; cookies: AstroCookies }) {
-  return createClient<Database>(supabaseUrl, supabaseAnonKey, {
-    auth: {
-      persistSession: false,
-      autoRefreshToken: false,
-      detectSessionInUrl: false,
-      flowType: "pkce",
-    },
+  return createServerClient<Database>(supabaseUrl, supabaseAnonKey, {
+    cookieOptions: cookieOptions,
     cookies: {
       getAll() {
         return parseCookieHeader(context.headers.get("Cookie") ?? "");

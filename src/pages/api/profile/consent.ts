@@ -8,7 +8,7 @@ import type {
   ConsentStatusResponseDto,
   ConsentUpsertCommand,
 } from '../../../types.ts';
-import { getProfile, ProfileForbiddenError, ProfileServiceError } from '../../../lib/profile-service.ts';
+import { ensureProfile, ProfileForbiddenError, ProfileServiceError } from '../../../lib/profile-service.ts';
 import type { Logger } from '../../../lib/logger.ts';
 
 const SUPABASE_URL = import.meta.env.SUPABASE_URL;
@@ -39,19 +39,15 @@ export const GET: APIRoute = async ({ request }) => {
   }
 
   try {
-    const profileResult = await getProfile(supabase, userResult.data.user.id, logger);
-    if (profileResult.status === 'missing') {
-      return new Response(null, { status: 204, headers: cacheHeaders() });
-    }
-
-    const consent = mapConsentStatus(profileResult.profile.consent);
+    const profile = await ensureProfile(supabase, userResult.data.user.id, logger);
+    const consent = mapConsentStatus(profile.consent);
     const payload = {
       ...consent,
       policyUrl: DEFAULT_POLICY_URL,
       policyContent: '',
       metadata: {
         source: DEFAULT_POLICY_SOURCE as 'internal' | 'gcp',
-        updatedAt: profileResult.profile.consent.acceptedAt ?? null,
+        updatedAt: profile.consent.acceptedAt ?? null,
       },
     };
 
@@ -104,12 +100,8 @@ export const POST: APIRoute = async ({ request }) => {
   const userId = userResult.data.user.id;
 
   try {
-    const profileResult = await getProfile(supabase, userId, logger);
-    if (profileResult.status === 'missing') {
-      return json({ error: 'Profile not initialized.' }, { status: 400 });
-    }
-
-    const currentConsent = profileResult.profile.consent;
+    const profile = await ensureProfile(supabase, userId, logger);
+    const currentConsent = profile.consent;
 
     if (currentConsent.acceptedVersion === command.version && currentConsent.isCompliant) {
       return json(
@@ -148,7 +140,7 @@ export const POST: APIRoute = async ({ request }) => {
     const receipt: ConsentReceipt = {
       acceptedVersion: command.version,
       acceptedAt,
-      expiresAt: profileResult.profile.quota.free.renewsAt ?? null,
+      expiresAt: profile.quota.free.renewsAt ?? null,
     };
 
     return json(receipt, { status: 201 });

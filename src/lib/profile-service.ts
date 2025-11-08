@@ -11,9 +11,12 @@ import type {
 import type { Logger } from './logger.ts';
 
 const CONSENT_CURRENT_VERSION = 'v1';
+const CONSENT_BOOTSTRAP_VERSION = 'v0';
 const DEFAULT_PERSONA_WIDTH = 0;
 const DEFAULT_PERSONA_HEIGHT = 0;
 const DEFAULT_PERSONA_CONTENT_TYPE = 'image/*';
+const DEFAULT_FREE_GENERATION_QUOTA = 3;
+const QUOTA_RENEWAL_DAYS = 30;
 
 type ProfileRow = Tables<'profiles'>;
 
@@ -82,6 +85,28 @@ export async function getProfile(
   return { status: 'found', profile };
 }
 
+export async function ensureProfile(
+  supabase: Supabase,
+  userId: string,
+  logger?: Logger,
+): Promise<ProfileResponseDto> {
+  const lookup = await getProfile(supabase, userId, logger);
+  if (lookup.status === 'found') {
+    return lookup.profile;
+  }
+
+  await createProfileWithDefaults(supabase, userId, logger);
+
+  const retry = await getProfile(supabase, userId, logger);
+  if (retry.status === 'found') {
+    return retry.profile;
+  }
+
+  throw new ProfileServiceError('Failed to initialize profile record.', {
+    context: { userId },
+  });
+}
+
 function mapProfileRowToDto(row: ProfileRow, logger?: Logger): ProfileResponseDto {
   const persona = mapPersona(row);
   const consent = mapConsent(row);
@@ -95,6 +120,49 @@ function mapProfileRowToDto(row: ProfileRow, logger?: Logger): ProfileResponseDt
     quota,
     clothCache,
   };
+}
+
+async function createProfileWithDefaults(
+  supabase: Supabase,
+  userId: string,
+  logger?: Logger,
+): Promise<ProfileResponseDto | null> {
+  const quotaRenewalAt = new Date(Date.now() + QUOTA_RENEWAL_DAYS * 24 * 60 * 60 * 1000).toISOString();
+
+  const payload = {
+    user_id: userId,
+    consent_version: CONSENT_BOOTSTRAP_VERSION,
+    consent_accepted_at: new Date().toISOString(),
+    free_generation_quota: DEFAULT_FREE_GENERATION_QUOTA,
+    free_generation_used: 0,
+    quota_renewal_at: quotaRenewalAt,
+  };
+
+  const { data, error } = await supabase
+    .from('profiles')
+    .insert(payload)
+    .select('*')
+    .single();
+
+  if (error) {
+    if (error.code === '23505') {
+      logger?.warn?.('Profile already existed while bootstrapping.', { userId });
+      return null;
+    }
+
+    logger?.error?.('Unable to bootstrap profile row.', {
+      userId,
+      code: error.code,
+      message: error.message,
+    });
+    throw new ProfileServiceError('Unable to bootstrap profile data.', { cause: error, context: { userId } });
+  }
+
+  if (!data) {
+    return null;
+  }
+
+  return mapProfileRowToDto(data, logger);
 }
 
 function mapPersona(row: ProfileRow): PersonaAssetMetadata | null {

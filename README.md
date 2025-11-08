@@ -41,7 +41,7 @@ Vestilook delivers photorealistic virtual try-on previews by combining a user’
    - `PRIVATE_VTON_GARMENT_BUCKET`, `PRIVATE_VTON_PERSONA_BUCKET`, `PRIVATE_VTON_GENERATION_BUCKET`
    - `PRIVATE_VTON_MAX_GARMENT_BYTES`, `PRIVATE_VTON_MIN_GARMENT_WIDTH`, `PRIVATE_VTON_MIN_GARMENT_HEIGHT`, `PRIVATE_VTON_ALLOWED_GARMENT_MIME`
    - `VITE_VTON_DEFAULT_ETA_SECONDS`
-   - `PUBLIC_CONSENT_POLICY_URL` – link do aktualnej polityki przetwarzania wizerunku wyświetlanej w formularzu generacji.
+   - `PUBLIC_CONSENT_POLICY_URL` – link do aktualnej polityki przetwarzania wizerunku wyświetlanej w formularzu generacji. Repozytorium dostarcza domyślną stronę pod `/legal/polityka-przetwarzania-wizerunku`, którą możesz podmienić lub rozszerzyć według potrzeb prawnych.
 4. Start the development server:
    ```bash
    npm run dev

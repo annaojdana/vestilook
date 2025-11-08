@@ -1,7 +1,7 @@
 import { describe, expect, it, beforeEach, vi } from "vitest";
 
 import type { Tables } from "@/db/database.types.ts";
-import { getProfile, ProfileForbiddenError, ProfileServiceError } from "@/lib/profile-service.ts";
+import { ensureProfile, getProfile, ProfileForbiddenError, ProfileServiceError } from "@/lib/profile-service.ts";
 import { createProfilesSupabaseMock } from "../../tests/support/supabase.ts";
 
 const baseRow: Tables<"profiles"> = {
@@ -152,5 +152,78 @@ describe("getProfile", () => {
         expiresAt: baseRow.cloth_expires_at,
       });
     }
+  });
+});
+
+describe("ensureProfile", () => {
+  const logger = {
+    warn: vi.fn(),
+    error: vi.fn(),
+  };
+
+  beforeEach(() => {
+    vi.clearAllMocks();
+  });
+
+  it("returns existing profile when already present", async () => {
+    const { supabase } = createProfilesSupabaseMock({
+      data: baseRow,
+      error: null,
+      status: 200,
+    });
+
+    const profile = await ensureProfile(supabase, baseRow.user_id, logger);
+    expect(profile.userId).toBe(baseRow.user_id);
+  });
+
+  it("bootstraps profile when missing", async () => {
+    const insertedRow: Tables<"profiles"> = {
+      ...baseRow,
+      user_id: "user-new",
+      consent_version: "v0",
+      free_generation_quota: 3,
+      free_generation_used: 0,
+    };
+
+    const { supabase, insertMock } = createProfilesSupabaseMock(
+      [
+        { data: null, error: null, status: 200 },
+        { data: insertedRow, error: null, status: 200 },
+      ],
+      {
+        insert: { data: insertedRow, error: null, status: 201 },
+      },
+    );
+
+    const profile = await ensureProfile(supabase, insertedRow.user_id, logger);
+    expect(insertMock).toHaveBeenCalled();
+    expect(profile.userId).toBe(insertedRow.user_id);
+  });
+
+  it("retries fetch when insert encounters duplicate row", async () => {
+    const { supabase, insertMock } = createProfilesSupabaseMock(
+      [
+        { data: null, error: null, status: 200 },
+        { data: baseRow, error: null, status: 200 },
+      ],
+      {
+        insert: { data: null, error: { message: "duplicate", code: "23505" }, status: 409 },
+      },
+    );
+
+    const profile = await ensureProfile(supabase, baseRow.user_id, logger);
+    expect(insertMock).toHaveBeenCalled();
+    expect(profile.userId).toBe(baseRow.user_id);
+  });
+
+  it("throws when bootstrap fails due to unexpected error", async () => {
+    const { supabase } = createProfilesSupabaseMock(
+      [{ data: null, error: null, status: 200 }],
+      {
+        insert: { data: null, error: { message: "db down", code: "XX001" }, status: 500 },
+      },
+    );
+
+    await expect(ensureProfile(supabase, "user-error", logger)).rejects.toBeInstanceOf(ProfileServiceError);
   });
 });

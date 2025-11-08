@@ -1,0 +1,139 @@
+---
+import Layout from "../../layouts/Layout.astro";
+const lastUpdated = "5 lutego 2025 r.";
+---
+
+<Layout title="Polityka przetwarzania wizerunku | Vestilook" showNavigation={false}>
+  <section class="bg-gradient-to-b from-background via-white to-accent/10 py-16 text-slate-900">
+    <div class="container px-6">
+      <div class="mx-auto max-w-4xl rounded-3xl border border-slate-200 bg-white/95 p-10 shadow-xl backdrop-blur-sm">
+        <div class="mb-10 text-center">
+          <p class="text-sm uppercase tracking-[0.25em] text-slate-500">Vestilook</p>
+          <h1 class="mt-3 text-3xl font-semibold text-slate-900">
+            Polityka przetwarzania wizerunku i materiałów graficznych
+          </h1>
+          <p class="mt-2 text-sm text-slate-500">Ostatnia aktualizacja: {lastUpdated}</p>
+        </div>
+
+        <div class="space-y-10 leading-relaxed text-slate-700">
+          <section aria-labelledby="cele">
+            <h2 id="cele" class="text-2xl font-semibold text-slate-900">1. Cel dokumentu</h2>
+            <p class="mt-3">
+              Niniejsza polityka opisuje zasady przetwarzania wizerunku, plików graficznych oraz wygenerowanych wyników
+              w aplikacji Vestilook (dalej „Aplikacja”). Dokument określa zakres danych, podstawy prawne, okres
+              przechowywania, standardy bezpieczeństwa oraz prawa użytkowników wynikające z obowiązujących przepisów,
+              w szczególności RODO oraz krajowych regulacji dotyczących ochrony wizerunku.
+            </p>
+          </section>
+
+          <section aria-labelledby="definicje">
+            <h2 id="definicje" class="text-2xl font-semibold text-slate-900">2. Kluczowe definicje</h2>
+            <ul class="mt-3 list-disc space-y-2 pl-6">
+              <li>
+                <strong>Wizerunek</strong> – wizerunek osoby utrwalony na zdjęciu przesłanym do Aplikacji jako tzw.
+                Persona Bazowa.
+              </li>
+              <li>
+                <strong>Materiały</strong> – zdjęcia ubrań, tekstury, wyniki generacji obrazów oraz metadane techniczne
+                (format, rozdzielczość, wielkość pliku).
+              </li>
+              <li>
+                <strong>Przetwarzanie</strong> – wszelkie operacje wykonywane na wizerunku lub materiałach, w tym
+                przesyłanie, zapisywanie, analizowanie, generowanie wizualizacji i udostępnianie użytkownikowi.
+              </li>
+            </ul>
+          </section>
+
+          <section aria-labelledby="zakres">
+            <h2 id="zakres" class="text-2xl font-semibold text-slate-900">3. Zakres i cele przetwarzania</h2>
+            <p class="mt-3">Vestilook przetwarza dane graficzne wyłącznie w następujących celach:</p>
+            <ol class="mt-3 list-decimal space-y-2 pl-6">
+              <li>Przygotowanie i prezentacja wizualizacji wirtualnego przymierzania ubrań.</li>
+              <li>Zapewnienie historii wygenerowanych stylizacji oraz oceny ich jakości.</li>
+              <li>Monitorowanie wykorzystania darmowych limitów generacji i optymalizacja kosztów infrastruktury.</li>
+              <li>
+                Analiza statystyczna (anonimowa i zagregowana) w celu poprawy algorytmów dopasowania materiałów do
+                sylwetki.
+              </li>
+            </ol>
+          </section>
+
+          <section aria-labelledby="podstawa">
+            <h2 id="podstawa" class="text-2xl font-semibold text-slate-900">4. Podstawy prawne</h2>
+            <p class="mt-3">
+              Przetwarzanie odbywa się na podstawie dobrowolnej zgody użytkownika udzielanej podczas pierwszego
+              uruchomienia Aplikacji oraz każdej próby wygenerowania nowej stylizacji. Zgoda obejmuje transfer danych do
+              usług Google Cloud Vertex AI Virtual Try-On zgodnie z regulaminem tej usługi. Zgoda może zostać cofnięta w
+              dowolnym momencie, co skutkuje wstrzymaniem dalszego przetwarzania i usunięciem aktywnych materiałów po
+              zakończeniu niezbędnych procesów technicznych.
+            </p>
+          </section>
+
+          <section aria-labelledby="przechowywanie">
+            <h2 id="przechowywanie" class="text-2xl font-semibold text-slate-900">5. Okres przechowywania</h2>
+            <ul class="mt-3 list-disc space-y-2 pl-6">
+              <li>Persona Bazowa – przechowywana do momentu jej zastąpienia lub usunięcia przez użytkownika.</li>
+              <li>Ubrania i wyniki generacji – usuwane automatycznie po 72 godzinach od utworzenia.</li>
+              <li>
+                Metadane (np. status zadań, oceny jakości) – przechowywane maksymalnie 24 miesiące w celu audytu oraz
+                rozliczeń z dostawcami usług chmurowych.
+              </li>
+            </ul>
+          </section>
+
+          <section aria-labelledby="bezpieczenstwo">
+            <h2 id="bezpieczenstwo" class="text-2xl font-semibold text-slate-900">6. Bezpieczeństwo i udostępnianie</h2>
+            <p class="mt-3">
+              Dane są przechowywane w Supabase (PostgreSQL + Storage) z rolami ograniczającymi dostęp tylko do właściciela
+              konta. Vestilook nie udostępnia wizerunku podmiotom trzecim poza:
+            </p>
+            <ul class="mt-3 list-disc space-y-2 pl-6">
+              <li>Google Cloud – wyłącznie w celu wykonania usługi VTON.</li>
+              <li>
+                Partnerom infrastrukturalnym zapewniającym hosting (np. DigitalOcean) – w zakresie niezbędnym do
+                utrzymania środowiska.
+              </li>
+            </ul>
+            <p class="mt-3">
+              Każdy transfer odbywa się z użyciem szyfrowania TLS 1.2+ oraz podpisanych żądań API. Dostęp administracyjny
+              jest ograniczony do upoważnionych członków zespołu Vestilook.
+            </p>
+          </section>
+
+          <section aria-labelledby="prawa">
+            <h2 id="prawa" class="text-2xl font-semibold text-slate-900">7. Prawa użytkownika</h2>
+            <p class="mt-3">
+              Użytkownik może w każdym momencie skorzystać z poniższych praw, kontaktując się z nami na adres
+              <a class="text-primary underline" href="mailto:privacy@vestilook.com">privacy@vestilook.com</a>:
+            </p>
+            <ul class="mt-3 list-disc space-y-2 pl-6">
+              <li>Dostęp do danych i uzyskanie kopii aktualnie przechowywanej Persony Bazowej.</li>
+              <li>Sprostowanie lub usunięcie materiałów przesłanych do systemu.</li>
+              <li>Ograniczenie przetwarzania lub wniesienie sprzeciwu wobec wykorzystania wizerunku.</li>
+              <li>Przeniesienie kluczowych danych do innego dostawcy usług na podstawie wniosku użytkownika.</li>
+            </ul>
+          </section>
+
+          <section aria-labelledby="kontakt">
+            <h2 id="kontakt" class="text-2xl font-semibold text-slate-900">8. Kontakt</h2>
+            <p class="mt-3">
+              W przypadku pytań dotyczących niniejszej polityki prosimy o kontakt mailowy:
+              <a class="text-primary underline" href="mailto:privacy@vestilook.com">privacy@vestilook.com</a>
+              lub listownie: Vestilook Sp. z o.o., ul. Przykładowa 10, 00-001 Warszawa.
+            </p>
+          </section>
+
+          <section aria-labelledby="zmiany">
+            <h2 id="zmiany" class="text-2xl font-semibold text-slate-900">9. Zmiany polityki</h2>
+            <p class="mt-3">
+              Vestilook może aktualizować niniejszy dokument w celu odzwierciedlenia zmian prawnych, technologicznych lub
+              organizacyjnych. O istotnych modyfikacjach informujemy w Aplikacji oraz poprzez aktualizację daty
+              obowiązywania wskazanej na początku dokumentu. Kontynuowanie korzystania z Aplikacji po wprowadzeniu
+              zmian oznacza akceptację zaktualizowanej treści.
+            </p>
+          </section>
+        </div>
+      </div>
+    </div>
+  </section>
+</Layout>
